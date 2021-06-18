@@ -63,5 +63,7 @@ namespace FFT
             ComplexBin data = new ComplexBin(a.Real * b, a.Imaginary * b);
             return data;
         }
+
+        public const int SizeOf = sizeof(float) * 4;
     }
 }
