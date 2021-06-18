@@ -57,5 +57,11 @@ namespace FFT
                 (a.Real * b.Imaginary + a.Imaginary * b.Real));
             return data;
         }
+        
+        public static ComplexBin operator *(ComplexBin a, float b)
+        {
+            ComplexBin data = new ComplexBin(a.Real * b, a.Imaginary * b);
+            return data;
+        }
     }
 }

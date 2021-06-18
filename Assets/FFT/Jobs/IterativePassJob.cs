@@ -9,7 +9,7 @@ namespace FFT
     public struct IterativePassJob : IJobParallelFor
     {
         [ReadOnly] 
-        public NativeSlice<TwiddleFactor> T;
+        public NativeSlice<TwiddleFactor> TwiddleFactors;
         [NativeDisableParallelForRestriction] 
         public NativeArray<float4> X;
 
@@ -17,7 +17,7 @@ namespace FFT
 
         public void Execute(int i)
         {
-            var t = T[i];
+            var t = TwiddleFactors[i];
             var e = X[t.I1];
             var o = Mulc(t.W4, X[t.I2]);
             X[t.I1] = e + o;

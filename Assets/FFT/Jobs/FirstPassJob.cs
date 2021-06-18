@@ -6,7 +6,26 @@ using Unity.Mathematics;
 namespace FFT
 {
     [BurstCompile]
-    public struct FirstPassJob : IJobParallelFor
+    public struct FirstPassFloatJob : IJobParallelFor
+    {
+        [ReadOnly]
+        public NativeArray<float> Input;
+        [ReadOnly] 
+        public NativeArray<int2> Permutations;
+        [WriteOnly] 
+        public NativeArray<float4> X;
+
+        public void Execute(int i)
+        {
+            float combined = Input[Permutations[i].x] + Input[Permutations[i].y];
+            float difference = Input[Permutations[i].x] - Input[Permutations[i].y];
+
+            X[i] = math.float4(combined, 0f, difference, 0f);
+        }
+    }
+    
+    [BurstCompile]
+    public struct FirstPassComplexJob : IJobParallelFor
     {
         [ReadOnly]
         public NativeArray<ComplexBin> Input;

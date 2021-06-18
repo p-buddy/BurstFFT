@@ -8,6 +8,8 @@ using Unity.Mathematics;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
 using FFT;
+using Unity.Jobs;
+using Unity.Jobs.LowLevel.Unsafe;
 
 sealed class Test : MonoBehaviour
 {
@@ -36,10 +38,18 @@ sealed class Test : MonoBehaviour
     Texture2D Benchmark<TDft>(TDft dft, NativeArray<float> input)
       where TDft : IDft, System.IDisposable
     {
+        var texture2 = new Texture2D(Width / 2, 1, TextureFormat.RFloat, false);
+        FFTOutput<float> spectrum = FFTScheduler.TransformToSamples(new FFTInput<float>(input));
+        spectrum.Handle.Complete();
+        texture2.LoadRawTextureData(spectrum.Data);
+        texture2.Apply();
+        spectrum.Data.Dispose();
+
+        myFFt = texture2;
+        
         var texture = new Texture2D(Width / 2, 1, TextureFormat.RFloat, false);
-        
         dft.Transform(input);
-        
+
         texture.LoadRawTextureData(dft.Spectrum);
         texture.Apply();
 
@@ -47,16 +57,21 @@ sealed class Test : MonoBehaviour
     }
     
     Texture2D _fft;
+    Texture2D myFFt;
 
     private void Start()
     {
-        Debug.Log(System.Runtime.InteropServices.Marshal.SizeOf(typeof(float2)));
-        Debug.Log(System.Runtime.InteropServices.Marshal.SizeOf(typeof(ComplexBin)));
+        //Debug.Log(System.Runtime.InteropServices.Marshal.SizeOf(typeof(float2)));
+        //Debug.Log(System.Runtime.InteropServices.Marshal.SizeOf(typeof(ComplexBin)));
+        
+        Debug.Log(sizeof(float) * 4);
+        Debug.Log(System.Runtime.InteropServices.Marshal.SizeOf(typeof(float4)));
+        Debug.Log(System.Runtime.InteropServices.Marshal.SizeOf(typeof(ComplexBin)) * 2);
     }
 
     void Update()
     {
-        using (var data = TempJobMemory.New<float>(TestData))
+        using (var data = TempJobMemory.New(TestData))
         {
             using (var ft = new BurstFft(Width))
             {
@@ -69,6 +84,7 @@ sealed class Test : MonoBehaviour
     {
         if (!Event.current.type.Equals(EventType.Repaint)) return;
         Graphics.DrawTexture(new Rect(10, 64, Width / 2, 16), _fft);
+        Graphics.DrawTexture(new Rect(10, 200, Width / 2, 16), myFFt);
     }
 }
 

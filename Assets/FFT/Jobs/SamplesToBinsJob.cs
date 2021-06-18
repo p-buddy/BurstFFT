@@ -2,7 +2,7 @@ using Unity.Jobs;
 
 namespace FFT
 {
-    public struct SamplesToComplexBinsJob : IJobParallelFor
+    public struct SamplesToBinsJob : IJobParallelFor
     {
         public void Execute(int index)
         {
