@@ -1,9 +1,10 @@
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
-using Unity.Mathematics;
 
 namespace FFT
 {
+    [BurstCompile]
     public struct PostprocessJob : IJobParallelFor
     {
         public NativeArray<ComplexBin> Output;

@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace FFT
 {
-    public static class FFTScheduler
+    public static class FFTFactory
     {
         const int InnerLoopBatchCount = 32;
 
@@ -74,18 +74,18 @@ namespace FFT
                 var twiddleFactorsSubSection = new NativeSlice<TwiddleFactor>(twiddleFactors, size.Width / 4 * i);
                 handle = new IterativePassJob
                 {
-                    TwiddleFactors = twiddleFactorsSubSection, 
+                    TwiddleFactors = twiddleFactorsSubSection,
                     X = X
                 }.Schedule(size.Width / 4, InnerLoopBatchCount, handle);
             }
-            
+
             var complexOutput = X.Reinterpret<ComplexBin>(ComplexBin.SizeOf);
             handle = new PostprocessJob
             {
                 Output = complexOutput,
                 Scale = 2.0f / size.Width
             }.Schedule(size.Width, InnerLoopBatchCount, handle);
-            
+
             return new FFTOutput<ComplexBin>
             {
                 Data = complexOutput,
@@ -93,13 +93,17 @@ namespace FFT
             };
         }
 
-        private static FFTOutput<ComplexBin> TransformToBinsInternal(FFTInput<float> input)
+        private static FFTOutput<ComplexBin> TransformToBinsInternal<TData, TJob>(in FFTInput<TData> input)
+            where TData : struct
+            where TJob : struct, IFirstPassJob<TData>, IJobParallelFor
         {
             FFTSize size = input.Size;
             NativeArray<int2> permutations = GetPermutations(in size, out JobHandle handle);
+
+            handle = (input.Handle.HasValue) ? JobHandle.CombineDependencies(handle, input.Handle.Value) : handle;
             
             NativeArray<float4> x = GetFFTInputArray(in size, Allocator.Persistent);
-            handle = new FirstPassFloatJob
+            handle = new TJob
             {
                 Input = input.Data, 
                 Permutations = permutations, 
@@ -114,18 +118,18 @@ namespace FFT
                 Handle = output.Handle
             };
         }
-        
-        public static FFTOutput<ComplexBin> TransformToBins(FFTInput<float> input)
+
+        #region MyRegion
+        public static FFTOutput<ComplexBin> TransformToBins(in FFTInput<float> input)
         {
-            FFTOutput<ComplexBin> output = TransformToBinsInternal(input);
-            output.Data.Dispose(output.Handle);
+            FFTOutput<ComplexBin> output = TransformToBinsInternal<float, FirstPassFloatJob>(in input);
             return output;
         }
 
-        public static FFTOutput<float> TransformToSamples(FFTInput<float> input)
+        public static FFTOutput<float> TransformToFloats(in FFTInput<float> input)
         {
             FFTSize size = input.Size;
-            FFTOutput<ComplexBin> bins = TransformToBinsInternal(input);
+            FFTOutput<ComplexBin> bins = TransformToBinsInternal<float, FirstPassFloatJob>(in input);
             NativeArray<float> samples = new NativeArray<float>(input.Size.Width, Allocator.Persistent);
             
             JobHandle handle = new BinsToSamplesJob()
@@ -136,18 +140,46 @@ namespace FFT
 
             bins.Data.Dispose(handle);
             
-            var z = new FFTOutput<float>
+            return new FFTOutput<float>
             {
                 Data = samples,
                 Handle = handle
-            };
-            return z;
+            };;
         }
-        
-        /*
-        public static FFTOutput<float> InverseTransformToSamples(NativeArray<ComplexBin> frequencyBins)
+
+        public static FFTOutput<float> InverseTransformToFloats(FFTInput<ComplexBin> input)
         {
+            JobHandle handle = new ToConjugateJob
+            {
+                Bins = input.Data
+            }.Schedule(input.Size.Width, InnerLoopBatchCount);
+
+            FFTInput<ComplexBin> conjugatedInput = new FFTInput<ComplexBin>(in input, handle);
+            
+            FFTOutput<ComplexBin> bins = TransformToBinsInternal<ComplexBin, FirstPassComplexJob>(in conjugatedInput);
+            
+            handle = new ToConjugateAndScaleJob
+            {
+                Bins = bins.Data,
+                Scale = 1f / input.Size.Width
+            }.Schedule(input.Size.Width, InnerLoopBatchCount, bins.Handle);
+            
+            NativeArray<float> samples = new NativeArray<float>(input.Size.Width, Allocator.Persistent);
+
+            handle = new BinsToSamplesJob
+            {
+                Bins = bins.Data,
+                Samples = samples
+            }.Schedule(input.Size.Width, InnerLoopBatchCount, handle);
+
+            bins.Data.Dispose(handle);
+            
+            return new FFTOutput<float>
+            {
+                Data = samples,
+                Handle = handle
+            };;
         }
-        */
+        #endregion
     }
 }

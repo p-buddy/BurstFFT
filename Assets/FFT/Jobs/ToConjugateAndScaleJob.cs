@@ -5,17 +5,16 @@ using Unity.Jobs;
 namespace FFT
 {
     [BurstCompile]
-    public struct BinsToSamplesJob : IJobParallelFor
+    public struct ToConjugateAndScaleJob : IJobParallelFor
     {
-        [ReadOnly] 
         public NativeArray<ComplexBin> Bins;
-        
-        [WriteOnly]
-        public NativeArray<float> Samples;
+    
+        [ReadOnly]
+        public float Scale;
         
         public void Execute(int index)
         {
-            Samples[index] = Bins[index].Magnitude;
+            Bins[index] = Bins[index].Conjugate * Scale;
         }
     }
 }

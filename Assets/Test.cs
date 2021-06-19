@@ -39,7 +39,7 @@ sealed class Test : MonoBehaviour
       where TDft : IDft, System.IDisposable
     {
         var texture2 = new Texture2D(Width / 2, 1, TextureFormat.RFloat, false);
-        FFTOutput<float> spectrum = FFTScheduler.TransformToSamples(new FFTInput<float>(input));
+        FFTOutput<float> spectrum = FFTFactory.TransformToFloats(new FFTInput<float>(input));
         spectrum.Handle.Complete();
         texture2.LoadRawTextureData(spectrum.Data);
         texture2.Apply();

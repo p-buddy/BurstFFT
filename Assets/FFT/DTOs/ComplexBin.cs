@@ -12,6 +12,7 @@ namespace FFT
 
         public float Magnitude => math.length(Vector);
         public float Phase => math.atan2(Imaginary, Real);
+        public ComplexBin Conjugate => new ComplexBin(Real, -Imaginary);
 
         public ComplexBin(float2 value)
         {
@@ -38,7 +39,7 @@ namespace FFT
             ComplexBin data = new ComplexBin(r * math.cos(radians), r * math.sin(radians));
             return data;
         }
-        
+
         public static ComplexBin operator +(ComplexBin a, ComplexBin b)
         {
             ComplexBin data = new ComplexBin(a.Real + b.Real , a.Imaginary + b.Imaginary);

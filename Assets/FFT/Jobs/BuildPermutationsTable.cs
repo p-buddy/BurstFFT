@@ -1,10 +1,12 @@
 using System.Linq;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 
 namespace FFT
 {
+    [BurstCompile]
     public struct BuildPermutationsTableJob : IJob
     {
         [WriteOnly]
