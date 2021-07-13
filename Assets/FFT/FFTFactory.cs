@@ -1,10 +1,9 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
-using UnityEditor.UIElements;
-using UnityEngine;
 
 namespace FFT
 {
@@ -12,15 +11,15 @@ namespace FFT
     {
         const int InnerLoopBatchCount = 32;
 
-        #region MyRegion
+        #region Fields
         private static readonly Dictionary<int, NativeArray<int2>> PermutationTablesByLength = new Dictionary<int, NativeArray<int2>>();
         private static readonly Dictionary<int, NativeArray<TwiddleFactor>> TwiddleFactorTablesByLength = new Dictionary<int, NativeArray<TwiddleFactor>>();
 
         private static ConcurrentQueue<NativeArray<ComplexBin>> ComplexBinsPool = new ConcurrentQueue<NativeArray<ComplexBin>>();
         private static ConcurrentQueue<NativeArray<float>> SamplesPool = new ConcurrentQueue<NativeArray<float>>();
-        #endregion
+        #endregion Fields
 
-        #region MyRegion
+        #region Internal Helper Functions
         private static NativeArray<int2> GetPermutations(in FFTSize size, out JobHandle handle)
         {
             if (!PermutationTablesByLength.TryGetValue(size.Width, out NativeArray<int2> permutations))
@@ -63,7 +62,7 @@ namespace FFT
         {
             return new NativeArray<float4>(size.Width / 2, allocator);
         }
-        #endregion
+        #endregion Internal Helper Functions
 
         private static FFTOutput<ComplexBin> Phase2(in FFTSize size, JobHandle dependencies, NativeArray<float4> X)
         {
@@ -79,7 +78,7 @@ namespace FFT
                 }.Schedule(size.Width / 4, InnerLoopBatchCount, handle);
             }
 
-            var complexOutput = X.Reinterpret<ComplexBin>(ComplexBin.SizeOf);
+            var complexOutput = X.Reinterpret<ComplexBin>(sizeof(float) * 4);
             handle = new PostprocessJob
             {
                 Output = complexOutput,
@@ -119,7 +118,7 @@ namespace FFT
             };
         }
 
-        #region MyRegion
+        #region Public Functions
         public static FFTOutput<ComplexBin> TransformToBins(in FFTInput<float> input)
         {
             FFTOutput<ComplexBin> output = TransformToBinsInternal<float, FirstPassFloatJob>(in input);
@@ -132,7 +131,7 @@ namespace FFT
             FFTOutput<ComplexBin> bins = TransformToBinsInternal<float, FirstPassFloatJob>(in input);
             NativeArray<float> samples = new NativeArray<float>(input.Size.Width, Allocator.Persistent);
             
-            JobHandle handle = new BinsToSamplesJob()
+            JobHandle handle = new BinsToUnsignedSamplesJob()
             {
                 Samples = samples,
                 Bins = bins.Data
@@ -149,7 +148,7 @@ namespace FFT
 
         public static FFTOutput<float> InverseTransformToFloats(FFTInput<ComplexBin> input)
         {
-            JobHandle handle = new ToConjugateJob
+            JobHandle handle = new ConjugateJob
             {
                 Bins = input.Data
             }.Schedule(input.Size.Width, InnerLoopBatchCount);
@@ -158,28 +157,50 @@ namespace FFT
             
             FFTOutput<ComplexBin> bins = TransformToBinsInternal<ComplexBin, FirstPassComplexJob>(in conjugatedInput);
             
-            handle = new ToConjugateAndScaleJob
+            handle = new ConjugateAndScaleJob
             {
                 Bins = bins.Data,
-                Scale = 1f / input.Size.Width
+                Scale = input.Size.Width / 4f // This 4 is a magic number -- must figure out later!
             }.Schedule(input.Size.Width, InnerLoopBatchCount, bins.Handle);
             
             NativeArray<float> samples = new NativeArray<float>(input.Size.Width, Allocator.Persistent);
 
-            handle = new BinsToSamplesJob
+            handle = new BinsToSignedSamplesJob()
             {
                 Bins = bins.Data,
                 Samples = samples
             }.Schedule(input.Size.Width, InnerLoopBatchCount, handle);
 
             bins.Data.Dispose(handle);
-            
+            handle.Complete();
             return new FFTOutput<float>
             {
                 Data = samples,
                 Handle = handle
-            };;
+            };
         }
-        #endregion
+
+        public static FFTOutput<float> ToSamples(this in FFTOutput<ComplexBin> bins, bool disposeBins)
+        {
+            NativeArray<float> samples = new NativeArray<float>(bins.Data.Length, Allocator.Persistent);
+            NativeArray<ComplexBin> binData = bins.Data;
+            JobHandle handle = new BinsToUnsignedSamplesJob()
+            {
+                Samples = samples,
+                Bins = binData
+            }.Schedule(samples.Length, InnerLoopBatchCount, bins.Handle);
+
+            if (disposeBins)
+            {
+                binData.Dispose(handle);
+            }
+
+            return new FFTOutput<float>
+            {
+                Data = samples,
+                Handle = handle
+            };
+        }
+        #endregion Public Functions
     }
 }

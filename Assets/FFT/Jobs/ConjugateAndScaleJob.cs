@@ -5,7 +5,7 @@ using Unity.Jobs;
 namespace FFT
 {
     [BurstCompile]
-    public struct ToConjugateAndScaleJob : IJobParallelFor
+    public struct ConjugateAndScaleJob : IJobParallelFor
     {
         public NativeArray<ComplexBin> Bins;
     

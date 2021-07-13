@@ -5,8 +5,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 
 namespace FFT
-{
-    [BurstCompile]
+{ 
     public struct BuildPermutationsTableJob : IJob
     {
         [WriteOnly]
@@ -18,9 +17,8 @@ namespace FFT
         int Permutate(int x)
         {
             int log = Size.Log;
-            return Enumerable.Range(0, Size.Log)
+            return Enumerable.Range(0, log)
                       .Aggregate(0, (acc, i) => acc += ((x >> i) & 1) << (log - 1 - i));
-
         }
         
         public void Execute()
