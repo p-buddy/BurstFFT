@@ -1,0 +1,9 @@
+﻿{
+    "name": "FFTEditModeTests",
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ]
+}
