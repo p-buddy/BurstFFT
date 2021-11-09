@@ -1,0 +1,32 @@
+{
+    "name": "JamUp.FFT.EditModeTests",
+    "rootNamespace": "JamUp.FFT.EditModeTests",
+    "references": [
+        "GUID:27619889b8ba8c24980f49ee34dbb44a",
+        "GUID:0acc523941302664db1f4e527237feb3",
+        "GUID:d8b63aba1907145bea998dd612889d6b",
+        "GUID:0d1987cca3ae04ca3bc2da4fa5c7d026",
+        "GUID:2a2982d3cde824fed902d32579a92eb8",
+        "GUID:a6821e6b7f5ef405dbcf2010e96418ca",
+        "GUID:c96019035741a44539895c07e01c0d76",
+        "GUID:25661f238c5bc490bad97c39b59fcfef",
+        "GUID:e0cd26848372d4e5c891c569017e11f1",
+        "GUID:7a714600460454ab4be2862264a7cfd6",
+        "GUID:4bbf908f09d074393ac49ccfa278a7fa"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

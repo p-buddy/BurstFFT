@@ -1,0 +1,18 @@
+{
+    "name": "JamUp.DataVisualization.Scripts",
+    "rootNamespace": "JamUp.DataVisualization",
+    "references": [
+        "GUID:13a6fdc14ca9df84eb8019bc66fa9e5d",
+        "GUID:d8b63aba1907145bea998dd612889d6b",
+        "GUID:92b2a5012985c440c8c254836b5725e7"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
