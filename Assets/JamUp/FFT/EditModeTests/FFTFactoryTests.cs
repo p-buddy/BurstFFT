@@ -86,7 +86,7 @@ namespace JamUp.FFT.EditModeTests
             Debug.Log($"Frequencies: [{String.Join(", ", frequencies)}]");
             Debug.Log($"Closest Bin Frequencies: [{String.Join(", ", frequencies.ToList().Select(GetClosestBinFrequencies))}]");
             
-            NativeArray<float> data = WaveDataFactory.GetValueArray(waves,
+            NativeArray<float> data = WaveDataFactory.GetRealValueArray(waves,
                                                                     SampleLength,
                                                                     SampleRate,
                                                                     Allocator.TempJob,
@@ -266,7 +266,7 @@ namespace JamUp.FFT.EditModeTests
         
         private Samples<float> WaveToFrequencyResponse(params Wave[] waves)
         {
-            NativeArray<float> data = WaveDataFactory.GetValueArray(waves,
+            NativeArray<float> data = WaveDataFactory.GetRealValueArray(waves,
                                                                     SampleLength,
                                                                     SampleRate,
                                                                     Allocator.TempJob,

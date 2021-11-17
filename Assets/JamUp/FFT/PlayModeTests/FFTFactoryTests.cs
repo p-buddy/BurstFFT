@@ -74,7 +74,7 @@ namespace JamUp.FFT.PlayModeTests
 
             while (Time.time <= time + testCase.TestTime)
             {
-                NativeArray<float> data = WaveDataFactory.GetValueArray(waves,
+                NativeArray<float> data = WaveDataFactory.GetRealValueArray(waves,
                                                                         SampleLength,
                                                                         SampleRate,
                                                                         Allocator.TempJob,
@@ -122,7 +122,7 @@ namespace JamUp.FFT.PlayModeTests
                     currentWaves[i] = Wave.Lerp(start[i], end[i], ratio);
                 }
 
-                NativeArray<float> data = WaveDataFactory.GetValueArray(currentWaves,
+                NativeArray<float> data = WaveDataFactory.GetRealValueArray(currentWaves,
                                                                        SampleLength,
                                                                        SampleRate,
                                                                        Allocator.TempJob,

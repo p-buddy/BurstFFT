@@ -21,9 +21,12 @@ namespace JamUp.StringUtility.EditModeTests
                 public Level1(object dummy = default)
                 {
                     LevelDown = new Level2(dummy);
+                    privateLevelDown = new Level2(dummy);
                 }
                 
                 public Level2 LevelDown { get; }
+
+                private Level2 privateLevelDown;
                 
                 public struct Level2
                 {
@@ -35,10 +38,13 @@ namespace JamUp.StringUtility.EditModeTests
                     public Level3 UnSetLevel;
                     public Level3 SetLevel;
 
+                    private Level3 unSetPrivateLevel;
+
                     public Level2(object dummy = default)
                     {
                         UnSetLevel = default;
                         SetLevel = new Level3();
+                        unSetPrivateLevel = default;
                     }
                 }
 
@@ -71,15 +77,15 @@ namespace JamUp.StringUtility.EditModeTests
             ToStringHelper.NameAndPublicData(new DummyObjectWithPrimitives(), false),
             ToStringHelper.NameAndPublicData(new DummyObjectWithNestedType(), true),
             ToStringHelper.NameAndPublicData(new DummyObjectWithNestedType(), false),
+            ToStringHelper.NameAndAllData(new DummyObjectWithManyNestedTypes(default), true),
+            ToStringHelper.NameAndAllData(new DummyObjectWithManyNestedTypes(default), false),
             ToStringHelper.NameAndPublicData(new DummyObjectWithManyNestedTypes(default), true),
             ToStringHelper.NameAndPublicData(new DummyObjectWithManyNestedTypes(default), false),
         };
         
         [Test]
-        [TestCaseSource(nameof(TestCases))]
-        public void Log(string readout)
+        public void Log([ValueSource(nameof(TestCases))] string readout)
         {
-            ToStringHelper.NameAndPublicData(new DummyObjectWithManyNestedTypes(), true);
             Debug.Log(readout);
         }
     }

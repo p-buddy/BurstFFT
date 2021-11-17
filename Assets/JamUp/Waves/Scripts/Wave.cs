@@ -1,8 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Unity.Mathematics;
 
 namespace JamUp.Waves
 {
-    public readonly struct Wave
+    public readonly struct Wave : IEqualityComparer<Wave>
     {
         public WaveType WaveType { get; }
         public float Frequency { get; }
@@ -24,11 +27,41 @@ namespace JamUp.Waves
                             math.lerp(start.PhaseOffset, end.PhaseOffset, s));
         }
 
+        public static Wave SinToCos(in Wave wave)
+        {
+            return new Wave(wave.WaveType, wave.Frequency, math.PI / 2f, wave.Amplitude);
+        }
+
         #if UNITY_EDITOR
         public override string ToString()
         {
-            return JamUp.StringUtility.ToStringHelper.NameAndPublicData(this, true);
+            return StringUtility.ToStringHelper.NameAndPublicData(this, true);
         }
-        #endif 
+        #endif
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(Wave x, Wave y) => x == y;
+
+        public int GetHashCode(Wave obj)
+        {
+            unchecked
+            {
+                var hashCode = (int)obj.WaveType;
+                hashCode = (hashCode * 397) ^ obj.Frequency.GetHashCode();
+                hashCode = (hashCode * 397) ^ obj.PhaseOffset.GetHashCode();
+                hashCode = (hashCode * 397) ^ obj.Amplitude.GetHashCode();
+                return hashCode;
+            }
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool operator ==(Wave x, Wave y) =>
+            x.WaveType == y.WaveType &&
+            x.Frequency == y.Frequency &&
+            x.PhaseOffset == y.PhaseOffset &&
+            x.Amplitude == y.Amplitude;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool operator !=(Wave a, Wave b) => !(a == b);
     }
 }

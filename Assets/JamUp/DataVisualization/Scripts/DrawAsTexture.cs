@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using JamUp.UnityUtility.Scripts;
+using JamUp.UnityUtility;
 using Unity.Collections;
 using UnityEngine;
 

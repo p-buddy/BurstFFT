@@ -15,27 +15,21 @@ namespace JamUp.StringUtility
         private const string Finalizer = "Finalize";
 
         public static string Context([CallerMemberName] string methodName = "", [CallerFilePath] string sourceFilePath = "")
-        {
-            string className;
-            bool isConstructor;
-            bool isFinalizer;
-            
+        {   
             #if UNITY_EDITOR
-            SlowButAccurate:
                 StackTrace stackTrace = new System.Diagnostics.StackTrace();
                 StackFrame frame = stackTrace.GetFrames()?[1];
                 Assert.IsNotNull(frame);
                 MethodBase method = frame.GetMethod();
-                className = method.DeclaringType?.Name;
+                string className = method.DeclaringType?.Name;
                 methodName = method.Name;
                 Assert.IsNotNull(className);
-                isConstructor = method.IsConstructor;
-                isFinalizer = !isConstructor && method.Name == Finalizer;
+                bool isConstructor = method.IsConstructor;
+                bool isFinalizer = !isConstructor && method.Name == Finalizer;
             #else
-            FastButInaccurate:
-                className = Path.GetFileName(sourceFilePath).RemoveSubString(Path.GetExtension(sourceFilePath));
-                isConstructor = memberName == ObjectConstructor || memberName == StaticConstructor;
-                isFinalizer = !isConstructor && memberName == Finalizer;
+                string className = Path.GetFileName(sourceFilePath).RemoveSubString(Path.GetExtension(sourceFilePath));
+                bool isConstructor = methodName == ObjectConstructor || methodName == StaticConstructor;
+                bool isFinalizer = !isConstructor && methodName == Finalizer;
             #endif
             
             if (isConstructor)

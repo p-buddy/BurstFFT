@@ -1,3 +1,4 @@
+using JamUp.Math;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
@@ -10,42 +11,97 @@ namespace JamUp.Waves
     {
         private const int InnerLoopBatchCount = 64;
 
-        public static NativeArray<float> GetValueArray(in Wave wave,
-                                                       int length,
-                                                       int sampleRate,
-                                                       Allocator allocator, 
-                                                       out JobHandle jobHandle)
+        #region Real
+        public static NativeArray<float> GetRealValueArray(in Wave wave, 
+                                                           int numberOfSamples, 
+                                                           int sampleRate, 
+                                                           Allocator allocator, 
+                                                           out JobHandle jobHandle)
         {
-            NativeArray<float> values = new NativeArray<float>(length, allocator);
-            jobHandle = new SetValueAtTimeSingleWaveJob
+            NativeArray<float> values = new NativeArray<float>(numberOfSamples, allocator);
+            jobHandle = new SetRealValueAtTimeSingleWaveJob
+            {
+                Data = values,
+                Wave = wave,
+                SampleRate = sampleRate
+            }.Schedule(numberOfSamples, InnerLoopBatchCount);
+            return values;
+        }
+
+        public static NativeArray<float> GetRealValueArray(Wave[] waves, 
+                                                           int numberOfSamples, 
+                                                           int sampleRate, 
+                                                           Allocator allocator, 
+                                                           out JobHandle jobHandle)
+        {
+            NativeArray<Wave> nativeWaves = new NativeArray<Wave>(waves, allocator);
+            NativeArray<float> values = GetRealValueArray(nativeWaves, numberOfSamples, sampleRate, allocator, out jobHandle);
+            nativeWaves.Dispose(jobHandle);
+            return values;
+        }
+        
+        public static NativeArray<float> GetRealValueArray(NativeArray<Wave> waves, 
+                                                           int numberOfSamples, 
+                                                           int sampleRate, 
+                                                           Allocator allocator, 
+                                                           out JobHandle jobHandle)
+        {
+            NativeArray<float> values = new NativeArray<float>(numberOfSamples, allocator);
+            jobHandle = new SetRealValueAtTimeMultipleWavesJob
+            {
+                Data = values,
+                Waves = waves,
+                SampleRate = sampleRate
+            }.Schedule(numberOfSamples, InnerLoopBatchCount);
+
+            return values;
+        }
+
+        public static float GetRealValueAtTime(in Wave wave, float time)
+        {
+            float rotationAmount = 2f * math.PI * time * wave.Frequency + wave.PhaseOffset;
+            switch (wave.WaveType)
+            {
+                case WaveType.Sine: 
+                    return wave.Amplitude * math.sin(rotationAmount);
+                case WaveType.Square: 
+                    return wave.Amplitude * math.sign(math.sin(rotationAmount));
+                case WaveType.Triangle:
+                    return wave.Amplitude * 2 / math.PI * math.asin(math.sin(rotationAmount));
+                case WaveType.Sawtooth:
+                    return wave.Amplitude * -2f / math.PI * math.atan(1f / math.tan(rotationAmount - math.PI / 2f));
+                default:
+                    return 0f;
+            }
+        }
+        #endregion Real 
+
+        #region Complex
+        public static NativeArray<Complex> GetComplexValueArray(in Wave wave, 
+                                                                int length, 
+                                                                int sampleRate, 
+                                                                Allocator allocator, 
+                                                                out JobHandle jobHandle)
+        {
+            NativeArray<Complex> values = new NativeArray<Complex>(length, allocator);
+            jobHandle = new SetComplexValueAtTimeSingleWaveJob
             {
                 Data = values,
                 Wave = wave,
                 SampleRate = sampleRate
             }.Schedule(length, InnerLoopBatchCount);
-            return values;
-        }
 
-        public static NativeArray<float> GetValueArray(Wave[] waves,
-                                                       int length,
-                                                       int sampleRate,
-                                                       Allocator allocator, 
-                                                       out JobHandle jobHandle)
-        {
-            NativeArray<Wave> nativeWaves = new NativeArray<Wave>(waves, allocator);
-            NativeArray<float> values = GetValueArray(nativeWaves, length, sampleRate, allocator, out jobHandle);
-            nativeWaves.Dispose(jobHandle);
             return values;
         }
         
-        public static NativeArray<float> GetValueArray(NativeArray<Wave> waves,
-                                                       int length,
-                                                       int sampleRate,
-                                                       Allocator allocator, 
-                                                       out JobHandle jobHandle)
+        public static NativeArray<Complex> GetComplexValueArray(NativeArray<Wave> waves, 
+                                                                int length, 
+                                                                int sampleRate, 
+                                                                Allocator allocator, 
+                                                                out JobHandle jobHandle)
         {
-            NativeArray<float> values = new NativeArray<float>(length, allocator);
-            jobHandle = new SetValueAtTimeMultipleWavesJob
+            NativeArray<Complex> values = new NativeArray<Complex>(length, allocator);
+            jobHandle = new SetComplexValueAtTimeMultipleWavesJob
             {
                 Data = values,
                 Waves = waves,
@@ -54,27 +110,17 @@ namespace JamUp.Waves
 
             return values;
         }
-
-        public static float GetValueAtTime(in Wave wave, float time)
+        
+        public static Complex GetComplexValueAtTime(in Wave wave, float time)
         {
-            float rotationAmount = 2f * math.PI * time * wave.Frequency + wave.PhaseOffset;
-            switch (wave.WaveType)
-            {
-                case WaveType.Sine: 
-                    return wave.Amplitude * math.sin(rotationAmount);
-                case WaveType.Square: 
-                    return math.sign(math.sin(rotationAmount));
-                case WaveType.Triangle:
-                    return 1f - 4f * math.abs(math.round(rotationAmount - 0.25f) - (rotationAmount - 0.25f));
-                case WaveType.Sawtooth:
-                    return 2f * (rotationAmount - math.floor(rotationAmount + 0.5f));
-                default:
-                    return 0f;
-            }
+            Wave cosWave = Wave.SinToCos(in wave);
+            return new Complex(GetRealValueAtTime(in cosWave, time), GetRealValueAtTime(in wave, time));
         }
-
+        #endregion Complex
+        
+        #region Jobs
         [BurstCompile]
-        private struct SetValueAtTimeSingleWaveJob : IJobParallelFor
+        private struct SetRealValueAtTimeSingleWaveJob : IJobParallelFor
         {
             [ReadOnly]
             public int SampleRate;
@@ -87,13 +133,13 @@ namespace JamUp.Waves
             public void Execute(int index)
             {
                 float time = index * 1f / SampleRate;
-                Data[index] += GetValueAtTime(in Wave, time);
+                Data[index] += GetRealValueAtTime(in Wave, time);
             }
         }
         
         
         [BurstCompile]
-        private struct SetValueAtTimeMultipleWavesJob : IJobParallelFor
+        private struct SetRealValueAtTimeMultipleWavesJob : IJobParallelFor
         {
             [ReadOnly]
             public int SampleRate;
@@ -108,9 +154,49 @@ namespace JamUp.Waves
                 foreach (Wave wave in Waves)
                 {
                     float time = index * 1f / SampleRate;
-                    Data[index] += GetValueAtTime(in wave, time);
+                    Data[index] += GetRealValueAtTime(in wave, time);
                 }
             }
         }
+        
+        [BurstCompile]
+        private struct SetComplexValueAtTimeSingleWaveJob : IJobParallelFor
+        {
+            [ReadOnly]
+            public int SampleRate;
+
+            [ReadOnly] 
+            public Wave Wave;
+
+            public NativeArray<Complex> Data;
+
+            public void Execute(int index)
+            {
+                float time = index * 1f / SampleRate;
+                Data[index] += GetComplexValueAtTime(in Wave, time);
+            }
+        }
+        
+        [BurstCompile]
+        private struct SetComplexValueAtTimeMultipleWavesJob : IJobParallelFor
+        {
+            [ReadOnly]
+            public int SampleRate;
+
+            [ReadOnly] 
+            public NativeArray<Wave> Waves;
+
+            public NativeArray<Complex> Data;
+
+            public void Execute(int index)
+            {
+                foreach (Wave wave in Waves)
+                {
+                    float time = index * 1f / SampleRate;
+                    Data[index] += GetComplexValueAtTime(in wave, time);
+                }
+            }
+        }
+        #endregion Jobs
     }
 }

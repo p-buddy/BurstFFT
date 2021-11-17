@@ -12,40 +12,60 @@ namespace JamUp.StringUtility
         private readonly struct Member
         {
             public Type Type { get; }
-            public object Value { get; }
             public string Name { get; }
+            public bool IsPublic { get; }
+            public bool IsBackingField { get; }
+            public object ValueOnObject(object obj) => getValue.Invoke(obj);
+            private readonly Func<object, object> getValue;
             
-            public Member(FieldInfo fieldInfo, object parent)
+            public Member(FieldInfo fieldInfo)
             {
                 Type = fieldInfo.FieldType;
-                Value = fieldInfo.GetValue(parent);
                 Name = fieldInfo.Name;
+                IsPublic = fieldInfo.IsPublic;
+                getValue = fieldInfo.GetValue;
+                IsBackingField = Name.ToLower().Contains(BackingFieldIdentifier.ToLower());
             }
             
-            public Member(PropertyInfo propertyInfo, object parent)
+            public Member(PropertyInfo propertyInfo)
             {
                 Type = propertyInfo.PropertyType;
-                Value = propertyInfo.GetValue(parent);
                 Name = propertyInfo.Name;
+                IsPublic = propertyInfo.GetAccessors().Any(accessor => accessor.IsPublic);
+                getValue = propertyInfo.GetValue;
+                IsBackingField = false;
             }
         }
         
-        private static Dictionary<Type, PropertyInfo[]> PublicPropertiesByType;
-        private static Dictionary<Type, FieldInfo[]> PublicFieldsByType;
         private static Dictionary<Type, bool> DoesDeclareToStringByType;
-        private static Dictionary<Type, MethodInfo> GenericNameAndPublicDataMethodByType;
-        private static string Tab = "\t";
-        private static string NewLine = "\n";
+        private static Dictionary<Type, MethodInfo> GenericNameAndDataMethodByType;
+        private static Dictionary<Type, Member[]> MembersByType;
+
+        private const string BackingFieldIdentifier = "BackingField";
+        private const string Tab = "\t";
+        private const string NewLine = "\n";
 
         static ToStringHelper()
         {
-            PublicPropertiesByType = new Dictionary<Type, PropertyInfo[]>();
-            PublicFieldsByType = new Dictionary<Type, FieldInfo[]>();
+            MembersByType = new Dictionary<Type, Member[]>();
             DoesDeclareToStringByType = new Dictionary<Type, bool>();
-            GenericNameAndPublicDataMethodByType = new Dictionary<Type, MethodInfo>();
+            GenericNameAndDataMethodByType = new Dictionary<Type, MethodInfo>();
+            
         }
         
-        public static string NameAndPublicData<T>(T obj, bool oneLine, int recursionDepth = 0)
+        public static string NameAndPublicData<T>(T obj, bool oneLine)
+        {
+            return NameAndData(obj, oneLine, true);
+        }
+        
+        public static string NameAndAllData<T>(T obj, bool oneLine)
+        {
+            return NameAndData(obj, oneLine, false);
+        }
+
+        #region Private
+        
+        private static string NameAndData<T>(T obj, bool oneLine, bool publicOnly, int recursionDepth = 0)
         {
             string indentation = oneLine ? null : String.Join("", Enumerable.Repeat(Tab, recursionDepth));
             string entryDelimiter = oneLine ? null : $"{NewLine}{indentation}{Tab}";;
@@ -55,24 +75,22 @@ namespace JamUp.StringUtility
             string bracketSpacing = oneLine ? " " : NewLine;
             stringBuilder.Append($"{bracketSpacing}{indentation}{{ ");
 
-            Member[] properties = GetPublicProperties<T>().Select(propertyInfo => new Member(propertyInfo, obj)).ToArray();
-            Member[] fields = GetPublicFields<T>().Select(fieldInfo => new Member(fieldInfo, obj)).ToArray();
-            
-            List<Member> members = new List<Member>(properties.Length + fields.Length);
-            members.AddRange(properties);
-            members.AddRange(fields);
+            Member[] members = publicOnly
+                ? GetMembers<T>().Where(member => member.IsPublic).ToArray()
+                : GetMembers<T>().Where(member => !member.IsBackingField).ToArray();
 
-            List<String> data = new List<string>(members.Count * 2);
+            List<String> data = new List<string>(members.Length * 2);
             foreach (Member member in members)
             {
                 data.AddIfNotNullOrEmpty(entryDelimiter);
-                if (CanBeTurnedIntoString(in member))
+                object value = member.ValueOnObject(obj);
+                if (CanBeTurnedIntoString(in member, value))
                 {
-                    data.Add($"{member.Name}: {member.Value}");
+                    data.Add($"{member.Name}: {value}");
                 }
                 else
                 {
-                    string nested = NameAndPublicDataForRunTimeType(member.Type, member.Value, oneLine, recursionDepth + 1);
+                    string nested = NameAndDataForRunTimeType(member.Type, value, oneLine, publicOnly, recursionDepth + 1);
                     data.Add($"{member.Name}: {nested}");
                 }
             }
@@ -82,52 +100,46 @@ namespace JamUp.StringUtility
             return stringBuilder.ToString();
         }
 
-        private static PropertyInfo[] GetPublicProperties<T>()
+        private static Member[] GetMembers<T>()
         {
-            if (!PublicPropertiesByType.TryGetValue(typeof(T), out PropertyInfo[] propertyInfos))
+            if (!MembersByType.TryGetValue(typeof(T), out Member[] members))
             {
-                propertyInfos = typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public);
-                PublicPropertiesByType[typeof(T)] = propertyInfos;
+                PropertyInfo[] properties = typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                FieldInfo[] fields = typeof(T).GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+                List<Member> membersList = new List<Member>(properties.Length + fields.Length);
+                membersList.AddRange(properties.Select(property => new Member(property)));
+                membersList.AddRange(fields.Select(field => new Member(field)));
+                members = membersList.ToArray();
+                MembersByType[typeof(T)] = members;
             }
 
-            return propertyInfos;
-        }
-        
-        private static FieldInfo[] GetPublicFields<T>()
-        {
-            if (!PublicFieldsByType.TryGetValue(typeof(T), out FieldInfo[] fieldInfos))
-            {
-                fieldInfos = typeof(T).GetFields(BindingFlags.Instance | BindingFlags.Public);
-                PublicFieldsByType[typeof(T)] = fieldInfos;
-            }
-
-            return fieldInfos;
+            return members;
         }
 
-        private static string NameAndPublicDataForRunTimeType(Type type, object value, bool oneLine, int recursionDepth)
+        private static string NameAndDataForRunTimeType(Type type, object value, bool oneLine, bool publicOnly, int recursionDepth)
         {
             if (!type.IsValueType && value == null)
             {
                 return "null";
             }
             
-            if (!GenericNameAndPublicDataMethodByType.TryGetValue(type, out MethodInfo nameAndPublicDataForType))
+            if (!GenericNameAndDataMethodByType.TryGetValue(type, out MethodInfo nameAndDataForType))
             {
-                nameAndPublicDataForType = typeof(ToStringHelper).GetMethod(nameof(NameAndPublicData))?.MakeGenericMethod(type);
-                Assert.IsNotNull(nameAndPublicDataForType);
-                GenericNameAndPublicDataMethodByType[type] = nameAndPublicDataForType;
+                nameAndDataForType = typeof(ToStringHelper).GetMethod(nameof(NameAndData), BindingFlags.NonPublic | BindingFlags.Static)?.MakeGenericMethod(type);
+                Assert.IsNotNull(nameAndDataForType);
+                GenericNameAndDataMethodByType[type] = nameAndDataForType;
             }
-            return nameAndPublicDataForType.Invoke(null, new [] { value, oneLine, recursionDepth }) as string;
+            return nameAndDataForType.Invoke(null, new [] { value, oneLine, publicOnly, recursionDepth }) as string;
         }
 
-        private static bool CanBeTurnedIntoString(in Member member)
+        private static bool CanBeTurnedIntoString(in Member member, object value)
         {
             if (member.Type.IsPrimitive || member.Type.IsEnum)
             {
                 return true;
             }
 
-            if (!member.Type.IsValueType && member.Value is null)
+            if (!member.Type.IsValueType && value is null)
             {
                 return false;
             }
@@ -153,5 +165,7 @@ namespace JamUp.StringUtility
             
             strings.Add(toAdd);
         }
+        
+        #endregion
     }
 }

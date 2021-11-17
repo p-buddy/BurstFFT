@@ -7,14 +7,17 @@
         "GUID:c3c2c69994e794906b68bc4db455ac94",
         "GUID:d8b63aba1907145bea998dd612889d6b",
         "GUID:92b2a5012985c440c8c254836b5725e7",
-        "GUID:7a714600460454ab4be2862264a7cfd6"
+        "GUID:7a714600460454ab4be2862264a7cfd6",
+        "GUID:2a2982d3cde824fed902d32579a92eb8",
+        "GUID:a6821e6b7f5ef405dbcf2010e96418ca"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "nunit.framework.dll"
+        "nunit.framework.dll",
+        ""
     ],
     "autoReferenced": false,
     "defineConstraints": [

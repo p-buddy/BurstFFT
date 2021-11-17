@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace JamUp.UnityUtility.Scripts
+namespace JamUp.UnityUtility
 {
     public abstract class SingletonMonoBehaviour<TComponentType> : MonoBehaviour where TComponentType : MonoBehaviour
     {
