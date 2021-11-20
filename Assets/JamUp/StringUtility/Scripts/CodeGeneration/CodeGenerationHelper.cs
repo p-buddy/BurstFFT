@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace JamUp.StringUtility
 {
@@ -19,8 +21,8 @@ namespace JamUp.StringUtility
             {
                 if (insideSectionToDelete)
                 {
+                    insideSectionToDelete = !lines[index].Contains(section.SectionOpen);
                     lines.RemoveAt(index);
-                    insideSectionToDelete = lines[index].Contains(section.SectionOpen);
                     continue;
                 }
 
@@ -42,6 +44,8 @@ namespace JamUp.StringUtility
                     {
                         lines.Insert(index + 1, toAdd[toAddIndex]);
                     }
+
+                    index += toAdd.Length;
                 }
             }
         }
@@ -49,8 +53,9 @@ namespace JamUp.StringUtility
         public static void AddToEndOfSection(this List<string> lines, in Section section, params string[] toAdd)
         {
             bool insideSection = false;
+            string spacing = null;
 
-            for (var index = 0; index < lines.Count; index++)
+            for (int index = 0; index < lines.Count; index++)
             {
                 if (insideSection)
                 {
@@ -58,18 +63,22 @@ namespace JamUp.StringUtility
                     {
                         for (int toAddIndex = toAdd.Length - 1; toAddIndex >= 0; toAddIndex--)
                         {
-                            lines.Insert(index, toAdd[toAddIndex]);
+                            lines.Insert(index, $"{spacing}{toAdd[toAddIndex]}");
                         }
+
+                        index += toAdd.Length;
+                        insideSection = false;
                     }
                 }
                 
                 if (lines[index].Contains(section.SectionOpen))
                 {
+                    spacing = GetLeadingWhitespace(lines[index]);
                     insideSection = true;
                 }
             }
         }
-        
+
         public static void ReplaceTemplates(this List<string> lines, params TemplateToReplace[] replacements)
         {
             for (var index = 0; index < lines.Count; index++)
@@ -79,6 +88,11 @@ namespace JamUp.StringUtility
                     lines[index] = lines[index].Replace(replacement.TemplateString, replacement.ReplacementString);
                 }
             }
+        }
+        
+        public static string GetLeadingWhitespace(string str)
+        {
+            return str.Replace(str.TrimStart(), "");
         }
     }
 }

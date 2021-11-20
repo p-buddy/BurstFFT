@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using UnityEngine.Assertions;
 
 namespace JamUp.StringUtility
@@ -21,7 +23,7 @@ namespace JamUp.StringUtility
                 StackFrame frame = stackTrace.GetFrames()?[1];
                 Assert.IsNotNull(frame);
                 MethodBase method = frame.GetMethod();
-                string className = method.DeclaringType?.Name;
+                string className = method.DeclaringType?.GetReadableClassName();
                 methodName = method.Name;
                 Assert.IsNotNull(className);
                 bool isConstructor = method.IsConstructor;
@@ -43,6 +45,27 @@ namespace JamUp.StringUtility
             }
             
             return $"{className}::{methodName}()::";
+        }
+        
+        private static string GetReadableClassName(this Type type)
+        {
+            if (!type.IsGenericType)
+            {
+                return type.Name;
+            }
+            
+            StringBuilder sb = new StringBuilder();
+            
+            string AppendGenericTypeArgument(string aggregate, Type genericTypeArgument)
+            {
+                return aggregate + (aggregate == "<" ? "" : ",") + GetReadableClassName(genericTypeArgument);
+            };
+
+            sb.Append(type.Name.Substring(0, type.Name.LastIndexOf("`")));
+            sb.Append(type.GetGenericArguments().Aggregate("<", AppendGenericTypeArgument));
+            sb.Append(">");
+
+            return sb.ToString();
         }
     }
 }

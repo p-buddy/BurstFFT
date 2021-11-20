@@ -1,3 +1,5 @@
+using System;
+
 namespace JamUp.StringUtility
 {
     public readonly struct Section
@@ -9,6 +11,11 @@ namespace JamUp.StringUtility
         {
             SectionOpen = sectionOpen;
             SectionClose = sectionClose;
+        }
+
+        public override string ToString()
+        {
+            return $"{SectionOpen}{Environment.NewLine}{SectionClose}";
         }
     }
 }

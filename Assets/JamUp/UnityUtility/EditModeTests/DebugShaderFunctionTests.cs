@@ -1,33 +1,39 @@
+using System;
 using JamUp.UnityUtility.Editor;
 using NUnit.Framework;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace JamUp.UnityUtility.EditModeTests
 {
     public class DebugShaderFunctionTests
     {
         [Test]
-        public void DebugShader()
+        public void TestFunctionWithInOutVariable()
         {
-            uint vertexIndex = 1;
-            float3 samplePosition = 0;
-            float3 nextSamplePosition = 0;
-            float3 sampleTangent = 0;
-            float3 nextSampleTangent = 0;
-            float thickness = 1f;
-            var input = new ShaderFunctionInputs<uint, float3, float3, float3, float3, float>()
+            string gpuFunctionToTest = @"
+float3 SomeFunction(inout int i)
+{
+    int before = i;
+    i = -i;
+    return float3(before, before, before);
+}
+";
+            DebugAndTestGPUCodeUtility.GenerateCgIncFile(gpuFunctionToTest,
+                                                         out string fileName,
+                                                         out Action onFinishedWithFile);
+
+            int value = 3;
+            var input = new NamedGPUFunctionArguments
             {
-                Input0 = vertexIndex,
-                Input1 = samplePosition,
-                Input2 = nextSamplePosition,
-                Input3 = sampleTangent,
-                Input4 = nextSampleTangent,
-                Input5 = thickness,
+                Argument0 = GPUFunctionArgument.InOut(value)
             };
-            using (new DebugShaderFunction<float3>("", "", input, out float3 x))
-            {
-                var y = 0;
-            }
+            
+            input.SendToGPUFunctionAndGetOutput(fileName, "SomeFunction", out float3 x);
+            Assert.AreEqual(x, new float3(value, value, value));
+            Assert.AreEqual(input.Argument0.GetValue<int>(), -value);
+            
+            onFinishedWithFile.Invoke();
         }
     }
 }
