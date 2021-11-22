@@ -6,33 +6,30 @@ Shader "JamUp/ProdeduralWave"
     _Color ("Color", Color) = (0, 0, 0, 1)
   }
 
-  SubShader{
-    //the material is completely non-transparent and is rendered at the same time as the other opaque geometry
-    Tags{ "RenderType"="Opaque" "Queue"="Geometry" }
-
-    Pass
-    {
+  SubShader
+  {
+      //the material is completely non-transparent and is rendered at the same time as the other opaque geometry
+      Tags{ "RenderType"="Opaque" }
+      Cull Off
+    
       CGPROGRAM
-
-      /* BEGIN DECLARATION OF DEBUG BUFFERS */
-      RWStructuredBuffer<float> DEBUG_DIRTY_FLAG_BUFFER;
-      RWStructuredBuffer<float3> DEBUG_VERTS_BUFFER;
-      /* END DECLARATION OF DEBUG BUFFERS */
-
       //include useful shader functions
       #include "UnityCG.cginc"
       #include "WaveFunctions.cginc"
 
       //define vertex and fragment shader functions
-      #pragma vertex vert
-      #pragma fragment frag
+      #pragma surface surf Standard vertex:vert addshadow
       #pragma target 3.5
 
       //tint of the texture
-      fixed4 _Color;
+      half4 _Color;
+      half _Smoothness;
+      half _Metallic;
+      half3 _Emission;
 
       const static int NumberOfSupportedWaves = 10;
       float4x4 WaveOriginToWorldMatrix;
+      float4x4 WorldToWaveOriginMatrix;
       int SampleRate;
       int WaveCount;
       float Thickness;
@@ -48,46 +45,72 @@ Shader "JamUp/ProdeduralWave"
       float PropagationScale;
       float DisplacementScale;
 
-      //the vertex shader function
-      float4 vert(uint vertex_id: SV_VertexID) : SV_POSITION
+      struct VertData
       {
-        const float time = GetTimeForVertexIndex(vertex_id, SampleRate);
+          float4 vertex : POSITION;
+          float3 normal : NORMAL;
+          float4 tangent : TANGENT;
+          float4 color : COLOR;
+          float4 texcoord1 : TEXCOORD1;
+          float4 texcoord2 : TEXCOORD2;
+          uint vid : SV_VertexID;
+      };
+
+      struct Input
+      {
+          float vface : VFACE;
+          float4 color : COLOR;
+      };
+
+      //the vertex shader function
+      void vert(inout VertData appdata)
+      {
+        const float time = GetTimeForVertexIndex(appdata.vid, SampleRate);
         const float timeResolution = GetTimeResolution(SampleRate);
         const float3 forward = mul(WaveOriginToWorldMatrix, float3(0, 0, 1));
 
         float3 position, nextPosition;
         float3 tangent, nextTangent;
-        for (int index = 0; index < NumberOfSupportedWaves; index++)
+        for (int index = 0; index < WaveCount; index++)
         {
-          const float3 displacementAxis = DisplacementAxes[index].xyz;
-          const Wave wave = NewWave(Frequencies[index], Amplitudes[index], Phases[index], WaveTypes[index]);
-          
-          position += GetValueAtTime(wave, time, displacementAxis);
-          nextPosition += GetValueAtTime(wave, time + timeResolution, displacementAxis);
-          
-          tangent += GetTangent(wave, time, timeResolution, displacementAxis, forward);
-          nextTangent += GetTangent(wave, time + timeResolution, timeResolution, displacementAxis, forward);
+            const float3 displacementAxis = DisplacementAxes[index].xyz;
+            const Wave wave = ConstructWave(Frequencies[index], Amplitudes[index], Phases[index], WaveTypes[index]);
+            AppendPositionAndTangent(time, timeResolution, wave, forward, displacementAxis, position, nextPosition, tangent, nextTangent);
         }
+        
+        position = position - forward * (WaveCount - 1);
+        nextPosition = nextPosition - forward * (WaveCount - 1);
+        //position = mul(WaveOriginToWorldMatrix, float4(position, 1));
+        //nextPosition = mul(WaveOriginToWorldMatrix, float4(nextPosition, 1));
+        
         tangent = normalize(tangent);
         nextTangent = normalize(nextTangent);
-        position = mul(WaveOriginToWorldMatrix, position);
-        nextPosition = mul(WaveOriginToWorldMatrix, nextPosition);
+        //tangent = mul(WaveOriginToWorldMatrix, tangent);
+        //nextTangent = mul(WaveOriginToWorldMatrix, nextTangent);
         
-        const float3 worldPosition = GetVertexPosition(vertex_id, position, nextPosition, tangent, nextTangent, Thickness);
-        DEBUG_VERTS_BUFFER[vertex_id] = worldPosition;
-        DEBUG_DIRTY_FLAG_BUFFER[0] = 1;
-        return mul(UNITY_MATRIX_VP, worldPosition);
+        const float3 localPosition = GetVertexPosition(appdata.vid, position, nextPosition, tangent, nextTangent, Thickness);
+        appdata.vertex.xyz = localPosition;
+        appdata.normal = float3(normalize(localPosition - position));
+        appdata.tangent.xyz = tangent;
+        appdata.color = _Color;
+          
+        // Transform modification
+        unity_ObjectToWorld = WaveOriginToWorldMatrix;
+        unity_WorldToObject = WorldToWaveOriginMatrix;
       }
 
-      //the fragment shader function
-      fixed4 frag() : SV_TARGET
+      void surf(Input IN, inout SurfaceOutputStandard o)
       {
-        //return the final color to be drawn on screen
-        return _Color;
+            o.Albedo = _Color.rgb;
+            o.Metallic = _Metallic;
+            o.Smoothness = _Smoothness;
+            o.Normal = float3(0, 0, IN.vface < 0 ? -1 : 1); // back face support
+            o.Emission = _Emission * IN.color.rgb;
       }
+
 
       ENDCG
-    }
+    
   }
   Fallback "VertexLit"
 }

@@ -5,61 +5,162 @@ namespace JamUp.UnityUtility
 {
     public class CameraController : MonoBehaviour
     {
-        public float mainSpeed = 10.0f;   // Regular speed
-        public float shiftAdd  = 25.0f;   // Amount to accelerate when shift is pressed
-        public float maxShift  = 100.0f;  // Maximum speed when holding shift
-        public float camSens   = 0.15f;   // Mouse sensitivity
+        [Header("Focus Object")]
+        [SerializeField, Tooltip ("Enable double-click to focus on objects?")] 
+        private bool doFocus = false;
+        [SerializeField] private float focusLimit = 100f;
+        [SerializeField] private float minFocusDistance = 5.0f;
+        private float doubleClickTime = .15f;
+        private float cooldown = 0;
+        [Header("Undo - Only undoes the Focus Object - The keys must be pressed in order.")]
+        [SerializeField] private KeyCode firstUndoKey = KeyCode.LeftControl;
+        [SerializeField] private KeyCode secondUndoKey = KeyCode.Z;
 
-        private Vector3 lastMouse = new Vector3(255, 255, 255);  // kind of in the middle of the screen, rather than at the top (play)
-        private float totalRun = 1.0f;
+        [Header("Movement")]
+        [SerializeField] private float moveSpeed = 1.0f;
+        [SerializeField] private float rotationSpeed = 10.0f;
+        [SerializeField] private float zoomSpeed = 10.0f;
 
-        void FixedUpdate()
+        //Cache last pos and rot be able to undo last focus object action.
+        Quaternion prevRot = new Quaternion();
+        Vector3 prevPos = new Vector3();
+
+        [Header("Axes Names")]
+        [SerializeField, Tooltip("Otherwise known as the vertical axis")] private string mouseY = "Mouse Y";
+        [SerializeField, Tooltip("AKA horizontal axis")] private string mouseX = "Mouse X";
+        [SerializeField, Tooltip("The axis you want to use for zoom.")] private string zoomAxis = "Mouse ScrollWheel";
+
+        [Header("Move Keys")]
+        [SerializeField] private KeyCode forwardKey = KeyCode.W;
+        [SerializeField] private KeyCode backKey = KeyCode.S;
+        [SerializeField] private KeyCode leftKey = KeyCode.A;
+        [SerializeField] private KeyCode rightKey = KeyCode.D;
+
+        [Header("Flat Move"), Tooltip("Instead of going where the camera is pointed, the camera moves only on the horizontal plane (Assuming you are working in 3D with default preferences).")]
+        [SerializeField] private KeyCode flatMoveKey = KeyCode.LeftShift;
+
+        [Header("Anchored Movement"), Tooltip("By default in scene-view, this is done by right-clicking for rotation or middle mouse clicking for up and down")]
+        [SerializeField] private KeyCode anchoredMoveKey = KeyCode.Mouse2;
+
+        [SerializeField] private KeyCode anchoredRotateKey = KeyCode.Mouse1;
+
+        private void Start()
         {
-            if (Input.GetKey(KeyCode.LeftControl))
-            {
-                lastMouse = Input.mousePosition - lastMouse;
-                lastMouse = new Vector3(-lastMouse.y * camSens, lastMouse.x * camSens, 0);
-                lastMouse = new Vector3(transform.eulerAngles.x + lastMouse.x, transform.eulerAngles.y + lastMouse.y, 0);
-                transform.eulerAngles = lastMouse;
-                lastMouse = Input.mousePosition;
-            }
-            
-            Vector3 velocity = GetBaseInput();
-            if (Input.GetKey(KeyCode.LeftShift))
-            {
-                totalRun += Time.fixedDeltaTime;
-                velocity *= totalRun * shiftAdd;
-                velocity.x = Mathf.Clamp(velocity.x, -maxShift, maxShift);
-                velocity.y = Mathf.Clamp(velocity.y, -maxShift, maxShift);
-                velocity.z = Mathf.Clamp(velocity.z, -maxShift, maxShift);
-            }
-            else
-            {
-                totalRun = Mathf.Clamp(totalRun * 0.5f, 1f, 1000f);
-                velocity *= mainSpeed;
-            }
-
-            velocity *= Time.fixedDeltaTime;
-            transform.Translate(velocity);
+            SavePosAndRot();
         }
 
-        private Vector3 GetBaseInput()
+        void Update()
         {
-            Vector3 velocity = new Vector3();
+            if (!doFocus)
+                return;
 
-            // Forwards / Backwards
-            velocity += Input.GetKey(KeyCode.W) ? Vector3.forward : Vector3.zero;
-            velocity += Input.GetKey(KeyCode.S) ? -Vector3.forward : Vector3.zero;
+            //Double click for focus 
+            if (cooldown > 0 && Input.GetKeyDown(KeyCode.Mouse0))
+                FocusObject();
+            if (Input.GetKeyDown(KeyCode.Mouse0))
+                cooldown = doubleClickTime;
+
+            //--------UNDO FOCUS---------
+            if (Input.GetKey(firstUndoKey)) 
+            {
+                if (Input.GetKeyDown(secondUndoKey))
+                    GoBackToLastPosition();
+            }
+
+            cooldown -= Time.deltaTime;
+        }
+
+        private void LateUpdate()
+        {
+            Vector3 move = Vector3.zero;
             
-            // Left / Right
-            velocity += Input.GetKey(KeyCode.A) ? -Vector3.right : Vector3.zero;
-            velocity += Input.GetKey(KeyCode.D) ? Vector3.right : Vector3.zero;
+            //Move and rotate the camera
+        
+            if (Input.GetKey(forwardKey))
+                move += Vector3.forward * moveSpeed;
+            if (Input.GetKey(backKey))
+                move += Vector3.back * moveSpeed;
+            if (Input.GetKey(leftKey))
+                move += Vector3.left * moveSpeed;
+            if (Input.GetKey(rightKey))
+                move += Vector3.right * moveSpeed;
 
-            // Up / Down
-            velocity += Input.GetKey(KeyCode.E) ? Vector3.up : Vector3.zero;
-            velocity += Input.GetKey(KeyCode.Q) ? -Vector3.up : Vector3.zero;
+            //By far the simplest solution I could come up with for moving only on the Horizontal plane - no rotation, just cache y
+            if (Input.GetKey(flatMoveKey))
+            {
+                float origY = transform.position.y;
 
-            return velocity;
+                transform.Translate(move);
+                transform.position = new Vector3(transform.position.x, origY, transform.position.z);
+
+                return;
+            }
+
+            float mouseMoveY = Input.GetAxis(mouseY);
+            float mouseMoveX = Input.GetAxis(mouseX);
+
+            //Move the camera when anchored
+            if (Input.GetKey(anchoredMoveKey)) 
+            {
+                move += Vector3.up * mouseMoveY * -moveSpeed;
+                move += Vector3.right * mouseMoveX * -moveSpeed;
+            }
+
+            //Rotate the camera when anchored
+            if (Input.GetKey(anchoredRotateKey)) 
+            {
+                transform.RotateAround(transform.position, transform.right, mouseMoveY * -rotationSpeed);
+                transform.RotateAround(transform.position, Vector3.up, mouseMoveX * rotationSpeed);
+            }
+
+            transform.Translate(move);
+            
+            //Scroll to zoom
+            float mouseScroll = Input.GetAxis(zoomAxis);
+            transform.Translate(Vector3.forward * mouseScroll * zoomSpeed);
+        }
+
+        private void FocusObject()
+        {
+            //To be able to undo
+            SavePosAndRot();
+
+            //If we double-clicked an object in the scene, go to its position
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit, focusLimit))
+            {
+                GameObject target = hit.collider.gameObject;
+                Vector3 targetPos = target.transform.position;
+                Vector3 targetSize = hit.collider.bounds.size;
+
+                transform.position = targetPos + GetOffset(targetPos, targetSize);
+
+                transform.LookAt(target.transform);
+            }
+        }
+
+        private void SavePosAndRot() 
+        {
+            prevRot = transform.rotation;
+            prevPos = transform.position;
+        }
+
+        private void GoBackToLastPosition() 
+        {
+            transform.position = prevPos;
+            transform.rotation = prevRot;
+        }
+
+        private Vector3 GetOffset(Vector3 targetPos, Vector3 targetSize)
+        {
+            Vector3 dirToTarget = targetPos - transform.position;
+
+            float focusDistance = Mathf.Max(targetSize.x, targetSize.z);
+            focusDistance = Mathf.Clamp(focusDistance, minFocusDistance, focusDistance);
+
+            return -dirToTarget.normalized * focusDistance;
         }
     }
 }

@@ -146,19 +146,28 @@ namespace JamUp.ShaderUtility.Editor
         }
 
         private static void BuildAndSetInputBuffersForInput(IGPUFunctionArguments arguments, out ComputeBufferProperty[] inputBuffers)
-        { 
+        {
+            var individualArguments = arguments.GetArguments();
             Type[] inputTypes = arguments.GetInputTypes();
+            Type[] elementTypes = individualArguments.Select(argument => argument.ElementType).ToArray();
             object[] values = arguments.GetInputValues();
-            inputBuffers = new ComputeBufferProperty[inputTypes.Length];
-            for (var index = 0; index < inputTypes.Length; index++)
+            inputBuffers = new ComputeBufferProperty[elementTypes.Length];
+            for (var index = 0; index < elementTypes.Length; index++)
             {
-                inputTypes[index].AssertIsValidShaderType();
+                elementTypes[index].AssertIsValidShaderType();
                 string propertyName = $"{ComputeShaderForTesting.InputBufferVariableName}{index}";
-                ComputeBuffer computeBuffer = new ComputeBuffer(1, Marshal.SizeOf(inputTypes[index]));
+                ComputeBuffer computeBuffer = new ComputeBuffer(individualArguments[index].ElementLength, Marshal.SizeOf(elementTypes[index]));
                 inputBuffers[index] = new ComputeBufferProperty(propertyName, computeBuffer);
-                Array value = Array.CreateInstance(inputTypes[index], 1);
-                ((IList)value)[0] = values[index];
-                inputBuffers[index].Buffer.SetData(value);
+                if (inputTypes[index].IsArray)
+                {
+                    inputBuffers[index].Buffer.SetData(values[index] as Array);
+                }
+                else
+                {
+                    Array value = Array.CreateInstance(elementTypes[index], 1);
+                    ((IList)value)[0] = values[index];
+                    inputBuffers[index].Buffer.SetData(value);
+                }
             }
         }
 
@@ -207,15 +216,21 @@ namespace JamUp.ShaderUtility.Editor
 
         private static void UpdateNecessaryInputs(IGPUFunctionArguments inputArguments, ComputeBufferProperty[] inputBuffers)
         {
-            InputModifier[] inputModifiers = inputArguments.GetModifiers();
-            Type[] inputTypes = inputArguments.GetInputTypes();
+            IGPUFunctionArgument[] arguments = inputArguments.GetArguments();
             for (int i = 0; i < inputArguments.ArgumentCount; i++)
             {
-                if (inputModifiers[i] == InputModifier.Out || inputModifiers[i] == InputModifier.InOut)
+                if (arguments[i].RequiresWriting)
                 {
-                    Array value = Array.CreateInstance(inputTypes[i], 1);
-                    inputBuffers[i].Buffer.GetData(value);
-                    inputArguments.UpdateInputValueAtIndex(((IList)value)[0], i);
+                    if (!arguments[i].IsArray)
+                    {
+                        Array value = Array.CreateInstance(arguments[i].ElementType, 1);
+                        inputBuffers[i].Buffer.GetData(value);
+                        inputArguments.UpdateInputValueAtIndex(((IList)value)[0], i);
+                    }
+                    else
+                    {
+                        inputBuffers[i].Buffer.GetData((Array)arguments[i].Value);
+                    }
                 }
             }
         }

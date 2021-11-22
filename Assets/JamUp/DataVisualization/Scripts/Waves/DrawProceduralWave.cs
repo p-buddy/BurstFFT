@@ -4,6 +4,7 @@ using JamUp.Waves;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace JamUp.DataVisualization.Waves
 {
@@ -26,6 +27,7 @@ namespace JamUp.DataVisualization.Waves
         private ShaderProperty PropogationScaleProperty;
         private ShaderProperty DisplacementScaleProperty;
         private ShaderProperty WaveOriginToWorldMatrixProperty;
+        private ShaderProperty WorldToWaveOriginMatrixProperty;
         private ShaderProperty DisplacementAxesProperty;
         private ShaderProperty ThicknessProperty;
 
@@ -41,6 +43,7 @@ namespace JamUp.DataVisualization.Waves
             DisplacementAxesProperty = new ShaderProperty(nameof(DisplacementAxesProperty), "Property");
             ThicknessProperty = new ShaderProperty(nameof(ThicknessProperty), "Property");
             WaveOriginToWorldMatrixProperty = new ShaderProperty(nameof(WaveOriginToWorldMatrixProperty), "Property");
+            WorldToWaveOriginMatrixProperty = new ShaderProperty(nameof(WorldToWaveOriginMatrixProperty), "Property");
         }
 
         private void Update()
@@ -51,18 +54,9 @@ namespace JamUp.DataVisualization.Waves
             }
             SetDynamicProperties();
             Bounds bounds = new Bounds(transform.position, Vector3.one * 50f);
-            int sampleRate = 100;
-            int numberOfVertices = 24 * (sampleRate - 1);
-            Graphics.DrawProcedural(material, bounds, MeshTopology.Triangles, numberOfVertices, 0, Camera.main, propertyBlock);
-        }
-
-        private void LateUpdate()
-        {
+            int numberOfVertices = 24 * (int)(state.time / (1f / state.sampleRate));
+            Graphics.DrawProcedural(material, bounds, MeshTopology.Triangles, numberOfVertices, 0, null, propertyBlock);
             propertyBlock.Clear();
-        }
-        
-        private void SetConstantProperties()
-        {
         }
 
         private void SetDynamicProperties()
@@ -80,20 +74,21 @@ namespace JamUp.DataVisualization.Waves
                 amplitudes[index] = wave.Amplitude;
                 phases[index] = wave.PhaseOffset;
                 waveTypes[index] = (float)wave.WaveType;
-                displacementAxes[index] = math.up().xyzx;
+                displacementAxes[index] = new float4(state.serializableWaves[index].DisplacementAxis, 0f);
             }
 
-            propertyBlock.SetInt(SampleRateProperty.ID, 100);
+            propertyBlock.SetInt(SampleRateProperty.ID, state.sampleRate);
             propertyBlock.SetInt(WaveCountProperty.ID, waveCount);
             propertyBlock.SetFloatArray(FrequenciesProperty.ID, frequencies);
             propertyBlock.SetFloatArray(AmplitudesProperty.ID, amplitudes);
             propertyBlock.SetFloatArray(PhasesProperty.ID, phases);
             propertyBlock.SetFloatArray(WaveTypesProperty.ID, waveTypes);
             propertyBlock.SetVectorArray(DisplacementAxesProperty.ID, displacementAxes);
-            propertyBlock.SetFloat(ThicknessProperty.ID, 1.0f);
+            propertyBlock.SetFloat(ThicknessProperty.ID, state.thickness);
             propertyBlock.SetFloat(PropogationScaleProperty.ID, 1.0f);
             propertyBlock.SetFloat(DisplacementScaleProperty.ID, 1.0f);
             propertyBlock.SetMatrix(WaveOriginToWorldMatrixProperty.ID, transform.localToWorldMatrix);
+            propertyBlock.SetMatrix(WorldToWaveOriginMatrixProperty.ID, transform.worldToLocalMatrix);
         }
     }
 }

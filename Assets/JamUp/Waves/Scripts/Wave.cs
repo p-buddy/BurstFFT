@@ -32,12 +32,10 @@ namespace JamUp.Waves
             return new Wave(wave.WaveType, wave.Frequency, math.PI / 2f, wave.Amplitude);
         }
 
-        #if UNITY_EDITOR
         public override string ToString()
         {
             return StringUtility.ToStringHelper.NameAndPublicData(this, true);
         }
-        #endif
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(Wave x, Wave y) => x == y;

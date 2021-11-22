@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using JamUp.ShaderUtility.Editor;
 using NUnit.Framework;
 using Unity.Mathematics;
@@ -76,6 +77,56 @@ namespace JamUp.UnityUtility.EditModeTests
             input.SendToCgFunctionAndGetOutput(fileName, "SomeFunction", out float3 ouput);
             Assert.AreEqual(input.Argument0.GetValue<int>(), valueToSet);
             Assert.AreEqual(ouput, new float3(valueToSet, valueToSet, valueToSet));
+        }
+        
+        [Test]
+        public void TestFunctionWithInArrayVariable()
+        {
+            const string functionName = "ReturnLastElement";
+            const int valueToSet = 10;
+            const int arraySize = 5;
+            string gpuFunctionToTest = 
+@$"int {functionName}(in int i[{arraySize}])
+{{
+    return i[{arraySize - 1}];
+}}";
+            
+            DebugAndTestGPUCodeUtility.GenerateCgIncFile(gpuFunctionToTest, out string fileName);
+
+            var input = new NamedGPUFunctionArguments
+            {
+                Argument0 = GPUFunctionArgument.In(Enumerable.Repeat(valueToSet, arraySize).ToArray())
+            };
+            
+            input.SendToCgFunctionAndGetOutput(fileName, functionName, out int output);
+            Assert.AreEqual(valueToSet, output);
+        }
+        
+        [Test]
+        public void TestFunctionWithInOutArrayVariable()
+        {
+            const string functionName = "SquareAndReturnLast";
+            const int arraySize = 5;
+            const int valueToSet = 10;
+            string gpuFunctionToTest = 
+@$"int {functionName}(inout int i[{arraySize}])
+{{
+    const int last = i[{arraySize - 1}];
+    i[{arraySize - 1}] = last * last;
+    return i[{arraySize - 1}];
+}}";
+            
+            DebugAndTestGPUCodeUtility.GenerateCgIncFile(gpuFunctionToTest, out string fileName);
+
+            var input = new NamedGPUFunctionArguments
+            {
+                Argument0 = GPUFunctionArgument.InOut(Enumerable.Repeat(valueToSet, arraySize).ToArray())
+            };
+
+            int squared = valueToSet * valueToSet;
+            input.SendToCgFunctionAndGetOutput(fileName, functionName, out int output);
+            Assert.AreEqual(squared, input.Argument0.GetValue<int[]>()[arraySize - 1]);
+            Assert.AreEqual(squared, output);
         }
     }
 }

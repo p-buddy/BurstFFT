@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using JamUp.StringUtility;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -74,7 +75,7 @@ namespace JamUp.ShaderUtility.Editor
                 }
             }
 
-            string json = JsonConvert.SerializeObject(shaderTypeNameByFullManagedTypeName);
+            string json = JsonConvert.SerializeObject(shaderTypeNameByFullManagedTypeName, Formatting.Indented);
             string relativeLocation = Path.Combine(GeneratedFilesDirectory, SavedSupportedTypesFile);
             FileGenerator.GenerateArbitraryFile(json, relativeLocation);
         }
@@ -100,7 +101,7 @@ namespace JamUp.ShaderUtility.Editor
         
         public static bool IsConvertibleToShaderType(this Type type)
         {
-            return ShaderTypeNameByManagedType.ContainsKey(type);
+            return ShaderTypeNameByManagedType.ContainsKey(type) || type.IsArray && ShaderTypeNameByManagedType.ContainsKey(type.GetElementType());
         }
         
         public static void AssertIsValidShaderType(this Type type)
@@ -116,6 +117,11 @@ namespace JamUp.ShaderUtility.Editor
 
         public static Type LookUpManagedType(string typeName)
         {
+            if (typeName.Contains("[]"))
+            {
+                Type elementType = SupportedManagedTypeByTypeName[typeName.RemoveSubString("[]")];
+                return elementType.MakeArrayType();
+            }
             return SupportedManagedTypeByTypeName[typeName];
         }
 
@@ -126,7 +132,10 @@ namespace JamUp.ShaderUtility.Editor
             {
                 Assert.AreEqual(alreadyAddedTypeName,
                                 shaderTypeNameToAdd,
-                                $"{Context()}Attempt to associate managed type {typeof(T).Name} with shader type '{shaderTypeNameToAdd}', but it has already been associated with {alreadyAddedTypeName}");
+                                $"{Context()}Attempt to associate managed type {typeof(T).Name} with shader type '{shaderTypeNameToAdd}', " +
+                                $"but it has already been associated with the name '{alreadyAddedTypeName}'." +
+                                "In order to override this, go adjust the entry in: " +
+                                $"{FileGenerator.GetPathToSubFile(Path.Combine(GeneratedFilesDirectory, SavedSupportedTypesFile))}");
                 return;
             }
 

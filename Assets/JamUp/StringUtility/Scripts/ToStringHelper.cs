@@ -53,12 +53,12 @@ namespace JamUp.StringUtility
             
         }
         
-        public static string NameAndPublicData<T>(T obj, bool oneLine)
+        public static string NameAndPublicData<T>(this T obj, bool oneLine)
         {
             return NameAndData(obj, oneLine, true);
         }
         
-        public static string NameAndAllData<T>(T obj, bool oneLine)
+        public static string NameAndAllData<T>(this T obj, bool oneLine)
         {
             return NameAndData(obj, oneLine, false);
         }

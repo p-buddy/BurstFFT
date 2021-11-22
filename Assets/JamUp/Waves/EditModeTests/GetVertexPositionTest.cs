@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
+
 using JamUp.ShaderUtility.Editor;
 using JamUp.StringUtility;
+
 using NUnit.Framework;
+
 using Unity.Mathematics;
-using UnityEngine;
 using Assert = UnityEngine.Assertions.Assert;
 
 namespace JamUp.Waves.EditModeTests
@@ -34,10 +36,14 @@ namespace JamUp.Waves.EditModeTests
                     Argument3 = GPUFunctionArgument.In(SampleTangent),
                     Argument4 = GPUFunctionArgument.In(NextSampleTangent),
                     Argument5 = GPUFunctionArgument.In(Thickness),
-                    // Argument6 = GPUFunctionArgument.Out<DebugVertexPosition>()
+                    #if DEBUG_GET_VERTEX_POSITION
+                    Argument6 = GPUFunctionArgument.Out<DebugVertexPosition>()
+                    #endif 
                 };
                 arguments.SendToCgFunctionAndGetOutput("WaveFunctions", "GetVertexPosition", out float3 output);
-                // Debug.Log(arguments.Argument6.GetValue<DebugVertexPosition>());
+                #if DEBUG_GET_VERTEX_POSITION
+                Debug.Log(arguments.Argument6.GetValue<DebugVertexPosition>());
+                #endif
                 return output;
             }
 

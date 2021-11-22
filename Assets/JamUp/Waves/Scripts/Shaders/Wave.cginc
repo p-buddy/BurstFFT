@@ -6,12 +6,12 @@ struct Wave
     int WaveType; 
 };
 
-Wave NewWave(const float frequency, const float amplitude, const float phase_radians, const int wave_type)
+Wave ConstructWave(in float frequency, in float amplitude, in float phaseRadians, in int waveType)
 {
     Wave wave;
     wave.Frequency = frequency;
     wave.Amplitude = amplitude;
-    wave.PhaseRadians = phase_radians;
-    wave.WaveType = wave_type;
+    wave.PhaseRadians = phaseRadians;
+    wave.WaveType = waveType;
     return wave;
 }

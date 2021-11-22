@@ -42,10 +42,30 @@ namespace JamUp.ShaderUtility.Editor
             lines.ReplaceTemplates(replacements);
             
             IGPUFunctionArguments functionArguments = functionToTest.FunctionArguments;
-            lines.AddToEndOfSection(InputBufferDeclarationSection, functionArguments.ToInputBufferDeclarationsString());
-            lines.AddToEndOfSection(InOutVariableDeclarationSection, functionArguments.ToInOutVariableDeclarationsString());
-            lines.AddToEndOfSection(InOutVariableCollectionSection, functionArguments.ToAssignmentOfInOutVariablesString());
+            (Section section, string[] lines)[] addToSectionAndRemoveIdentifiers =
+            {
+                (InputBufferDeclarationSection, functionArguments.ToInputBufferDeclarationsString()),
+                (InOutVariableDeclarationSection, functionArguments.ToInOutVariableDeclarationsString()),
+                (InOutVariableCollectionSection, functionArguments.ToAssignmentOfInOutVariablesString()),
+                (LengthDeclarationSection, functionArguments.ToInputBufferLengthDeclarationsString()),
+                (ArrayVariableDeclarationSection, functionArguments.ToArrayVariableDeclarationsString()),
+            };
+            
+            foreach ((Section section, string[] lines) sectionAddition in addToSectionAndRemoveIdentifiers)
+            {
+                if (sectionAddition.lines == null || sectionAddition.lines.Length == 0)
+                {
+                    lines.RemoveSectionIdentifiers(sectionAddition.section);
+                    continue;
+                }
+                lines.AddToEndOfSection(sectionAddition.section, sectionAddition.lines);
+                lines.ReplaceSectionIdentifiers(sectionAddition.section, String.Empty);
+            }
+
             lines.AddToEndOfSection(SaveDataSection, functionToTest.GetSaveData());
+            lines.ReplaceSectionIdentifiers(OutputBufferDeclarationSection, String.Empty);
+            lines.RemoveMultipleEmptyLines();
+            
             return String.Join(Environment.NewLine, lines);
         }
         
@@ -55,6 +75,8 @@ namespace JamUp.ShaderUtility.Editor
         private static readonly Section OutputBufferDeclarationSection = new Section("BEGIN OUTPUT SECTION", "END OUTPUT SECTION");
         private static readonly Section InOutVariableDeclarationSection = new Section("BEGIN DECLARE IN/OUT VARIABLES", "END DECLARE IN/OUT VARIABLES");
         private static readonly Section InOutVariableCollectionSection = new Section("BEGIN COLLECT IN/OUT VARIABLES", "END COLLECT IN/OUT VARIABLES");
+        private static readonly Section ArrayVariableDeclarationSection = new Section("BEGIN DECLARE ARRAY VARIABLES", "END DECLARE ARRAY VARIABLES");
+        private static readonly Section LengthDeclarationSection = new Section("BEGIN DECLARE LENGTHS", "END DECLARE LENGTHS");
         #endregion Template Sections
 
         #region Template Identifiers
@@ -70,6 +92,8 @@ namespace JamUp.ShaderUtility.Editor
         public const string KernelPrefix = "RUN_";
         private const string OutVariablePrefix = "out";
         private const string InOutVariablePrefix = "inOut";
+        private const string LengthVariableSuffix = "Length";
+        private const string ArrayVariableSuffix = "Array";
         #endregion Generated Text
 
         private static readonly string Template = 
@@ -78,6 +102,9 @@ $@"#include ""{ShaderFilePathIdentifier}""
 
 /* {InputBufferDeclarationSection.SectionOpen} */
 /* {InputBufferDeclarationSection.SectionClose} */
+
+/* {LengthDeclarationSection.SectionOpen} */
+/* {LengthDeclarationSection.SectionClose} */
 
 /* {OutputBufferDeclarationSection.SectionOpen} */
 RWStructuredBuffer<{OutputTypeIdentifier}> {OutputBufferVariableName};
@@ -88,6 +115,9 @@ void {KernelPrefix}{FunctionToDebugIdentifier} ()
 {{
     /* {InOutVariableDeclarationSection.SectionOpen} */
     /* {InOutVariableDeclarationSection.SectionClose} */
+
+    /* {ArrayVariableDeclarationSection.SectionOpen} */
+    /* {ArrayVariableDeclarationSection.SectionClose} */
 
     {OutputBufferVariableName}[0] = {FunctionToDebugIdentifier}({InputArgumentsIdentifier});
 
@@ -116,9 +146,18 @@ void {KernelPrefix}{FunctionToDebugIdentifier} ()
             string[] inputArguments = new string[arguments.ArgumentCount];
             for (var index = 0; index < inputArguments.Length; index++)
             {
-                inputArguments[index] = args[index].RequiresWriting
-                    ? args[index].ToLocalReadWriteVariable(index)
-                    : $"{InputBufferVariableName}{index}[0]";
+                if (args[index].IsArray)
+                {
+                    inputArguments[index] = $"{InputBufferVariableName}{index}{ArrayVariableSuffix}";
+                }
+                else if (args[index].RequiresWriting)
+                {
+                    inputArguments[index] = args[index].ToLocalReadWriteVariable(index);
+                }
+                else
+                {
+                    inputArguments[index] = $"{InputBufferVariableName}{index}[0]";
+                }
             }
             return String.Join(", ", inputArguments);
         }
@@ -129,19 +168,45 @@ void {KernelPrefix}{FunctionToDebugIdentifier} ()
             {
                 string variableName = $"{InputBufferVariableName}{index}";
                 return input.RequiresWriting
-                    ? GetReadWriteBufferDeclaration(input.Type, variableName)
-                    : GetReadOnlyBufferDeclaration(input.Type, variableName);
+                    ? GetReadWriteBufferDeclaration(input.ElementType, variableName)
+                    : GetReadOnlyBufferDeclaration(input.ElementType, variableName);
             }
             return arguments.GetArguments().Select(GetDeclaration).ToArray();
+        }
+        
+        private static string[] ToInputBufferLengthDeclarationsString(this IGPUFunctionArguments arguments)
+        {
+            string GetDeclaration(IGPUFunctionArgument input, int index)
+            {
+                string variableName = $"{InputBufferVariableName}{index}{LengthVariableSuffix}";
+                return $"uint {variableName} = {input.ElementLength};";
+            }
+            return arguments.GetArguments().Select(GetDeclaration).Where(s => !string.IsNullOrEmpty(s)).ToArray();
         }
         
         private static string[] ToInOutVariableDeclarationsString(this IGPUFunctionArguments arguments)
         {
             string GetDeclaration(IGPUFunctionArgument input, int index)
             {
-                return input.RequiresWriting
-                    ? $"{input.Type.GetShaderTypeName()} {input.ToLocalReadWriteVariable(index)} = {InputBufferVariableName}{index}[0];"
+                return input.RequiresWriting && !input.IsArray
+                    ? $"{input.ElementType.GetShaderTypeName()} {input.ToLocalReadWriteVariable(index)} = {InputBufferVariableName}{index}[0];"
                     : null;
+            }
+            return arguments.GetArguments().Select(GetDeclaration).Where(s => !string.IsNullOrEmpty(s)).ToArray();
+        }
+        
+        private static string[] ToArrayVariableDeclarationsString(this IGPUFunctionArguments arguments)
+        {
+            string GetDeclaration(IGPUFunctionArgument input, int index)
+            {
+                if (!input.IsArray)
+                {
+                    return null;
+                }
+
+                IEnumerable<string> elementsFromBuffer = Enumerable.Range(0, input.ElementLength)
+                                                                   .Select(element => $"{InputBufferVariableName}{index}[{element}]");
+                return $"{input.ElementType.GetShaderTypeName()} {InputBufferVariableName}{index}{ArrayVariableSuffix}[{input.ElementLength}] = {{{String.Join(", ", elementsFromBuffer)}}};";
             }
             return arguments.GetArguments().Select(GetDeclaration).Where(s => !string.IsNullOrEmpty(s)).ToArray();
         }
@@ -150,9 +215,16 @@ void {KernelPrefix}{FunctionToDebugIdentifier} ()
         {
             string GetAssignment(IGPUFunctionArgument input, int index)
             {
-                return input.RequiresWriting
+                if (!input.RequiresWriting)
+                {
+                    return null;
+                }
+                return !input.IsArray
                     ? $"{InputBufferVariableName}{index}[0] = {input.ToLocalReadWriteVariable(index)};"
-                    : null;
+                    : $"for(uint i=0; i < {input.ElementLength}; i++)" +
+                      "{ " +
+                      $"{InputBufferVariableName}{index}[i] = {InputBufferVariableName}{index}{ArrayVariableSuffix}[i]; " +
+                      "}";
             }
             return arguments.GetArguments().Select(GetAssignment).Where(s => !string.IsNullOrEmpty(s)).ToArray();
         }

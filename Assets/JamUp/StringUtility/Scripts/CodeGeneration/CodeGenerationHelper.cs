@@ -13,7 +13,40 @@ namespace JamUp.StringUtility
                 lines[index] = lines[index].Replace(templateString, generatedString);
             }
         }
-        
+
+        public static List<string> GetSection(this List<string> lines, in Section section, bool excludeSectionGuards = true)
+        {
+            List<string> sectionLines = new List<string>(lines.Count);
+            bool inSection = false;
+            foreach (string line in lines)
+            {
+                if (line.Contains(section.SectionClose))
+                {
+                    inSection = false;
+                    if (!excludeSectionGuards)
+                    {
+                        sectionLines.Add(line);
+                    }
+                }
+                
+                if (inSection)
+                {
+                    sectionLines.Add(line);
+                }
+                
+                if (line.Contains(section.SectionOpen))
+                {
+                    inSection = true;
+                    if (!excludeSectionGuards)
+                    {
+                        sectionLines.Add(line);
+                    }
+                }
+            }
+
+            return sectionLines;
+        }
+
         public static void RemoveSection(this List<string> lines, in Section section)
         {
             bool insideSectionToDelete = false;
@@ -30,6 +63,28 @@ namespace JamUp.StringUtility
                 {
                     lines.RemoveAt(index);
                     insideSectionToDelete = true;
+                }
+            }
+        }
+        
+        public static void RemoveSectionIdentifiers(this List<string> lines, in Section section)
+        {
+            for (var index = lines.Count - 1; index >= 0; index--)
+            {
+                if (lines[index].Contains(section.SectionClose) || lines[index].Contains(section.SectionOpen))
+                {
+                    lines.RemoveAt(index);
+                }
+            }
+        }
+        
+        public static void ReplaceSectionIdentifiers(this List<string> lines, in Section section, string replacementString)
+        {
+            for (var index = lines.Count - 1; index >= 0; index--)
+            {
+                if (lines[index].Contains(section.SectionClose) || lines[index].Contains(section.SectionOpen))
+                {
+                    lines[index] = replacementString;
                 }
             }
         }
@@ -87,6 +142,20 @@ namespace JamUp.StringUtility
                 {
                     lines[index] = lines[index].Replace(replacement.TemplateString, replacement.ReplacementString);
                 }
+            }
+        }
+        
+        public static void RemoveMultipleEmptyLines(this List<string> lines)
+        {
+            bool previousWasEmpty = false;
+            for (int index = lines.Count - 1; index >= 0; index--)
+            {
+                bool isEmpty = lines[index] == String.Empty;
+                if (isEmpty && previousWasEmpty)
+                {
+                    lines.RemoveAt(index);
+                }
+                previousWasEmpty = isEmpty;
             }
         }
         

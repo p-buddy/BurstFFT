@@ -39,6 +39,7 @@ namespace JamUp.ShaderUtility.Editor
         {
             FunctionUnderTestName = functionUnderTestName;
             FullPathToFileContainingFunction = fullPathToFileContainingFunction;
+            Assert.IsTrue(!outputType.IsArray);
             OutputType = outputType;
             FunctionArguments = functionArguments;
             ReturnTypeName = outputType.FullName;
@@ -67,13 +68,13 @@ namespace JamUp.ShaderUtility.Editor
             try
             {
                 gpuFunction.OutputType = SupportedShaderTypes.LookUpManagedType(gpuFunction.ReturnTypeName);
+                Assert.IsTrue(!gpuFunction.OutputType.IsArray);
             }
-            catch (Exception e)
+            catch
             {
                 throw new KeyNotFoundException($"{Context()}Return type string of '{gpuFunction.ReturnTypeName}' could not be converted to runtime type.");
             }
-    
-
+            
             Type[] inputTypes = gpuFunction.InputTypeNamesToTypes;
             InputModifier[] inputModifiers = gpuFunction.InputModifierStringsToValues;
             Assert.AreEqual(inputTypes.Length, inputModifiers.Length);
