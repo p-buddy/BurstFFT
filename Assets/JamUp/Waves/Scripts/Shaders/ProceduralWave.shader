@@ -21,20 +21,24 @@ Shader "JamUp/ProdeduralWave"
       #pragma surface surf Standard vertex:vert addshadow
       #pragma target 3.5
 
-      //tint of the texture
-      half4 _Color;
-      half _Smoothness;
-      half _Metallic;
-      half3 _Emission;
-
       const static int NumberOfSupportedWaves = 10;
+
+      //tint of the texture
+      
+      
+      /* BEGIN SHADER SETTINGS */
+      half4 _Color;
+      half Smoothness;
+      half Metallic;
+      half3 Emission;
+      
       float4x4 WaveOriginToWorldMatrix;
       float4x4 WorldToWaveOriginMatrix;
+      
       int SampleRate;
       int WaveCount;
       float Thickness;
 
-      // Wave Settings
       float Frequencies[NumberOfSupportedWaves];
       float Amplitudes[NumberOfSupportedWaves];
       float Phases[NumberOfSupportedWaves];
@@ -44,6 +48,7 @@ Shader "JamUp/ProdeduralWave"
       
       float PropagationScale;
       float DisplacementScale;
+      /* END SHADER SETTINGS */
 
       struct VertData
       {
@@ -69,30 +74,28 @@ Shader "JamUp/ProdeduralWave"
         const float timeResolution = GetTimeResolution(SampleRate);
         const float3 forward = mul(WaveOriginToWorldMatrix, float3(0, 0, 1));
 
-        float3 position, nextPosition;
-        float3 tangent, nextTangent;
+        float3 samplePosition, nextSamplePosition;
+        float3 sampleTangent, nextSampleTangent;
         for (int index = 0; index < WaveCount; index++)
         {
             const float3 displacementAxis = DisplacementAxes[index].xyz;
             const Wave wave = ConstructWave(Frequencies[index], Amplitudes[index], Phases[index], WaveTypes[index]);
-            AppendPositionAndTangent(time, timeResolution, wave, forward, displacementAxis, position, nextPosition, tangent, nextTangent);
+            AppendPositionAndTangent(time, timeResolution, wave, forward, displacementAxis, samplePosition, nextSamplePosition, sampleTangent, nextSampleTangent);
         }
         
-        position = position - forward * (WaveCount - 1);
-        nextPosition = nextPosition - forward * (WaveCount - 1);
-        //position = mul(WaveOriginToWorldMatrix, float4(position, 1));
-        //nextPosition = mul(WaveOriginToWorldMatrix, float4(nextPosition, 1));
+        samplePosition = samplePosition - forward * (WaveCount - 1);
+        nextSamplePosition = nextSamplePosition - forward * (WaveCount - 1);
         
-        tangent = normalize(tangent);
-        nextTangent = normalize(nextTangent);
-        //tangent = mul(WaveOriginToWorldMatrix, tangent);
-        //nextTangent = mul(WaveOriginToWorldMatrix, nextTangent);
+        sampleTangent = normalize(sampleTangent);
+        nextSampleTangent = normalize(nextSampleTangent);
+
+        float3 normal;
+        const float3 localPosition = GetVertexPosition(appdata.vid, samplePosition, nextSamplePosition, sampleTangent, nextSampleTangent, Thickness, normal);
         
-        const float3 localPosition = GetVertexPosition(appdata.vid, position, nextPosition, tangent, nextTangent, Thickness);
         appdata.vertex.xyz = localPosition;
-        appdata.normal = float3(normalize(localPosition - position));
-        appdata.tangent.xyz = tangent;
-        appdata.color = _Color;
+        appdata.normal = normal;
+        appdata.tangent.xyz = sampleTangent;
+        appdata.color = float4(nextSampleTangent, 1);
           
         // Transform modification
         unity_ObjectToWorld = WaveOriginToWorldMatrix;
@@ -101,14 +104,11 @@ Shader "JamUp/ProdeduralWave"
 
       void surf(Input IN, inout SurfaceOutputStandard o)
       {
-            o.Albedo = _Color.rgb;
-            o.Metallic = _Metallic;
-            o.Smoothness = _Smoothness;
-            o.Normal = float3(0, 0, IN.vface < 0 ? -1 : 1); // back face support
-            o.Emission = _Emission * IN.color.rgb;
+            o.Albedo = IN.color.rgb;
+            o.Metallic = Metallic;
+            o.Smoothness = Smoothness;
+            o.Emission = Emission * IN.color.rgb;
       }
-
-
       ENDCG
     
   }

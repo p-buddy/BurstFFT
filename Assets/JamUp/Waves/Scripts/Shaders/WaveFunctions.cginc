@@ -9,13 +9,13 @@ float TimeToRadians(in float time)
 
 float GetValueAtTime(in Wave wave, in float time)
 {
-    float rotationAmount = TimeToRadians(time) * wave.Frequency + wave.PhaseRadians;
-    float sineValue = sin(rotationAmount);
+    const float rotationAmount = TimeToRadians(time) * wave.Frequency + wave.PhaseRadians;
+    const float sineValue = sin(rotationAmount);
 
-    float sineFactor = float(SineWaveType & wave.WaveType) * wave.Amplitude * sineValue;
-    float squareFactor = float((SquareWaveType & wave.WaveType) >> 1) * wave.Amplitude * sign(sineValue);
-    float triangleFactor = float((TriangleWaveType & wave.WaveType) >> 2) * wave.Amplitude * TwoOverPI * asin(sineValue);
-    float sawToothFactor = float((SawtoothWaveType & wave.WaveType) >> 3) * wave.Amplitude * -TwoOverPI * atan(1.0f / tan(rotationAmount - PIOverTwo));
+    const float sineFactor = float(SineWaveType & wave.WaveType) * wave.Amplitude * sineValue;
+    const float squareFactor = float((SquareWaveType & wave.WaveType) >> 1) * wave.Amplitude * sign(sineValue);
+    const float triangleFactor = float((TriangleWaveType & wave.WaveType) >> 2) * wave.Amplitude * TwoOverPI * asin(sineValue);
+    const float sawToothFactor = float((SawtoothWaveType & wave.WaveType) >> 3) * wave.Amplitude * -TwoOverPI * atan(1.0f / tan(rotationAmount - PIOverTwo));
     
     return sineFactor + squareFactor + triangleFactor + sawToothFactor;
 }
@@ -33,9 +33,9 @@ float GetTimeResolution(in uint sampleRate)
 float3 GetTangentAtTime(in Wave wave, in float time, in float timeResolution,
                         float3 displacementVector, float3 timeAxis)
 {
-    float ahead = GetValueAtTime(wave, time + timeResolution);
-    float behind = GetValueAtTime(wave, time - timeResolution);
-    float slope = (ahead - behind) / (2.0f * TimeToRadians(timeResolution));
+    const float ahead = GetValueAtTime(wave, time + timeResolution);
+    const float behind = GetValueAtTime(wave, time - timeResolution);
+    const float slope = (ahead - behind) / (2.0f * TimeToRadians(timeResolution));
     return normalize(slope * displacementVector + timeAxis);
 }
 
@@ -46,23 +46,9 @@ struct CoordinateAxes
     float3 Forward;
 };
 
-CoordinateAxes GetCoordinateAxes(in float3 forward)
-{
-    float3 forwardNorm = normalize(forward);
-    bool isForwardAskew = abs(forwardNorm.z) != 1.0f;
-    float3 up = isForwardAskew ? cross(forwardNorm, float3(0,0,1)) : float3(0, forwardNorm.z, 0);;
-    float3 right = cross(up, forward);
-    
-    CoordinateAxes frame;
-    frame.Forward = forward;
-    frame.Up = up;
-    frame.Right = right;
-    return frame;
-}
-
 float GetTimeForVertexIndex(in uint vertexIndex, in uint sampleRate)
 {
-    uint sampleIndex = vertexIndex / 24;
+    const uint sampleIndex = vertexIndex / 24;
     return float(sampleIndex) / float(sampleRate);
 }
 
@@ -95,7 +81,8 @@ float3 GetVertexPosition(in uint vertexIndex,
     in float3 nextSamplePosition,
     in float3 sampleTangent,
     in float3 nextSampleTangent,
-    in float thickness/*,
+    in float thickness,
+    out float3 normal/*,
     out DebugVertexPosition debug*/)
 {
     // TRIANGLE TYPE 0: [0] (front_face) face vertex # --> [1] (front_face) face vertex # + 1 --> [2] (back_face) face vertex #
@@ -114,27 +101,40 @@ float3 GetVertexPosition(in uint vertexIndex,
     
     static int UpFactors[4] = {1, 1, -1, -1};
     static int RightFactors[4] = {1, -1, -1, 1};
+
+    const float3 direction = nextSamplePosition - samplePosition;
+
+    //const CoordinateAxes frontAxes = GetCoordinateAxes(sampleTangent);
+    //CoordinateAxes backAxes = GetCoordinateAxes(nextSampleTangent);
     
-    CoordinateAxes frontAxes = GetCoordinateAxes(sampleTangent);
-    CoordinateAxes backAxes = GetCoordinateAxes(nextSampleTangent);
+    CoordinateAxes frontAxes;
+    frontAxes.Up = normalize(cross(float3(1,1,1), sampleTangent));
+    frontAxes.Right = cross(frontAxes.Up, sampleTangent);
 
-    float halfThickness = 0.5f * thickness;
+    CoordinateAxes backAxes;
+    backAxes.Up = normalize(cross(float3(1,1,1), nextSampleTangent));
+    backAxes.Right = cross(backAxes.Up, nextSampleTangent);
 
-    uint vertexIndexWithinSection = vertexIndex % 24; // 0 - 23
-    uint sequenceIndexWithinTriangle = vertexIndexWithinSection % 3; // 0 - 2
-    uint triangleNumber = vertexIndexWithinSection / 3; // 0 - 7
-    uint triangleType = triangleNumber / 4; // 0 or 1
-    uint anchorIndex = triangleNumber % 4; // 0 - 3
-    uint anchorPredecessorIndex = anchorIndex > 0 ? (anchorIndex - 1) % 4 : 3; // 0 - 3
-    uint anchorSuccessorIndex = (anchorIndex + 1) % 4; // 0 - 3
-    
-    bool useFrontAxes = sequenceIndexWithinTriangle == 0 || sequenceIndexWithinTriangle == 1 && triangleType == 0;
-    float3 up = float(useFrontAxes) * frontAxes.Up + float(!useFrontAxes) * backAxes.Up;
-    float3 right = float(useFrontAxes) * frontAxes.Right + float(!useFrontAxes) * backAxes.Right;
-    float3 position = float(useFrontAxes) * samplePosition + float(!useFrontAxes) * nextSamplePosition;
+    const float halfThickness = 0.5f * thickness;
 
-    bool noOffsetFromAnchorIndex = sequenceIndexWithinTriangle == 0 || triangleType == 0 && sequenceIndexWithinTriangle == 2 || triangleType == 1 && sequenceIndexWithinTriangle == 1;
-    uint finalIndex = int(noOffsetFromAnchorIndex) * anchorIndex + int(!noOffsetFromAnchorIndex && triangleType == 0) * anchorSuccessorIndex + int(!noOffsetFromAnchorIndex && triangleType == 1) * anchorPredecessorIndex;
+    const uint vertexIndexWithinSection = vertexIndex % 24; // 0 - 23
+    const uint sequenceIndexWithinTriangle = vertexIndexWithinSection % 3; // 0 - 2
+    const uint triangleNumber = vertexIndexWithinSection / 3; // 0 - 7
+    const uint triangleType = triangleNumber / 4; // 0 or 1
+    const uint anchorIndex = triangleNumber % 4; // 0 - 3
+    const uint anchorPredecessorIndex = anchorIndex > 0 ? (anchorIndex - 1) % 4 : 3; // 0 - 3
+    const uint anchorSuccessorIndex = (anchorIndex + 1) % 4; // 0 - 3
+
+    const bool useFrontAxes = sequenceIndexWithinTriangle == 0 || sequenceIndexWithinTriangle == 1 && triangleType == 0;
+    const float3 up = useFrontAxes ? frontAxes.Up : backAxes.Up;
+    const float3 right = useFrontAxes ? frontAxes.Right : backAxes.Right;
+    const float3 position = useFrontAxes ? samplePosition : nextSamplePosition;
+
+    const bool noOffsetFromAnchorIndex = sequenceIndexWithinTriangle == 0 || triangleType == 0 && sequenceIndexWithinTriangle == 2 || triangleType == 1 && sequenceIndexWithinTriangle == 1;
+    const uint finalIndex = noOffsetFromAnchorIndex ? anchorIndex : triangleType == 0 ? anchorSuccessorIndex : anchorPredecessorIndex;
+
+    const float3 offset = UpFactors[finalIndex] * up + RightFactors[finalIndex] * right;
+    normal = normalize(offset);
     /*
     debug.VertexIndexWithinSection = vertexIndexWithinSection;
     debug.SequenceIndexWithinTriangle = sequenceIndexWithinTriangle;
@@ -147,7 +147,7 @@ float3 GetVertexPosition(in uint vertexIndex,
     debug.Right = right;
     debug.FinalIndex = finalIndex;
     */
-    return position + halfThickness * (UpFactors[finalIndex] * up + RightFactors[finalIndex] * right);
+    return position + halfThickness * offset;
 }
 
 
