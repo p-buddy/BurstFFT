@@ -55,7 +55,7 @@ namespace JamUp.DataVisualization.Waves
             SetDynamicProperties();
             Bounds bounds = new Bounds(transform.position, Vector3.one * 50f);
             int numberOfVertices = 24 * (int)(state.time / (1f / state.sampleRate));
-            Graphics.DrawProcedural(material, bounds, MeshTopology.Triangles, numberOfVertices, 0, null, propertyBlock);
+            Graphics.DrawProcedural(material, bounds, MeshTopology.Triangles, numberOfVertices, 0, null, propertyBlock, ShadowCastingMode.TwoSided);
             propertyBlock.Clear();
         }
 
