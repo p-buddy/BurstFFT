@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
 
-using JamUp.ShaderUtility.Editor;
-using JamUp.StringUtility;
-
 using NUnit.Framework;
 
 using Unity.Mathematics;
 using Assert = UnityEngine.Assertions.Assert;
+
+using pbuddy.ShaderUtility.EditorScripts;
+using pbuddy.StringUtility.RuntimeScripts;
 
 namespace JamUp.Waves.EditModeTests
 {
@@ -28,7 +28,7 @@ namespace JamUp.Waves.EditModeTests
             public float Thickness;
             public float3 RunFunctionAndGetOutput()
             {
-                var arguments = new NamedGPUFunctionArguments
+                var arguments = new NonspecificNamedGPUFunctionArguments
                 {
                     Argument0 = GPUFunctionArgument.In(VertexIndex),
                     Argument1 = GPUFunctionArgument.In(SamplePosition),

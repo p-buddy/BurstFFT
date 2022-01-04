@@ -3,7 +3,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace JamUp.ShaderUtility.Editor
+namespace pbuddy.ShaderUtility.EditorScripts
 {
     #if USE_NORMAL_VISUALIZER
     [CustomEditor(typeof(MeshFilter))]

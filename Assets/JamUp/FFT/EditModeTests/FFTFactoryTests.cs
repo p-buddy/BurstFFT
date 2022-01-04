@@ -11,10 +11,11 @@ using Random = Unity.Mathematics.Random;
 using JamUp.Math;
 using JamUp.Waves;
 using JamUp.NativeArrayUtility;
-using JamUp.TestUtility;
 using Unity.Mathematics;
 using UnityEngine;
 using Assert = UnityEngine.Assertions.Assert;
+
+using pbuddy.TestUtility.EditorScripts;
 
 using static JamUp.ThirdParty.ExternalFFT.Wrapper;
 

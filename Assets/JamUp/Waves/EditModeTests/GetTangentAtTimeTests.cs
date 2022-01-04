@@ -1,7 +1,8 @@
-using JamUp.ShaderUtility.Editor;
 using NUnit.Framework;
 using Unity.Mathematics;
 using UnityEngine;
+
+using pbuddy.ShaderUtility.EditorScripts;
 
 namespace JamUp.Waves.EditModeTests
 {
@@ -11,7 +12,7 @@ namespace JamUp.Waves.EditModeTests
         public void Test()
         {
             var wave = new ShaderWave { Frequency = 1f, Amplitude = 1f, WaveType = (int)WaveType.Sine, PhaseRadians = 0f};
-            var arguments = new NamelessGPUFunctionArguments(GPUFunctionArgument.In(wave),
+            var arguments = new UnnamedGPUFunctionArguments(GPUFunctionArgument.In(wave),
                                                              GPUFunctionArgument.In(0f),
                                                              GPUFunctionArgument.In(0.00001f),
                                                              GPUFunctionArgument.In(math.up()),

@@ -5,8 +5,8 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Unity.Mathematics",
-        "JamUp.ShaderUtility.Editor",
-        "JamUp.Waves.Scripts"
+        "JamUp.Waves.Scripts",
+        "pbuddy.ShaderUtility.EditorScripts"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

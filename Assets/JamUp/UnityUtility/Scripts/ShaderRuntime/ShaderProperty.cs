@@ -1,5 +1,6 @@
-using JamUp.StringUtility;
 using UnityEngine;
+
+using pbuddy.StringUtility.RuntimeScripts;
 
 namespace JamUp.UnityUtility
 {

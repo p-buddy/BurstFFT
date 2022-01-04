@@ -1,9 +1,8 @@
 using System;
 using JamUp.Math;
-using JamUp.StringUtility;
 using Unity.Collections;
 using Unity.Jobs;
-using static JamUp.StringUtility.ContextProvider;
+
 namespace JamUp.FFT
 {
     public readonly struct Samples<T> : IDisposable where T : struct

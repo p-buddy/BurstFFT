@@ -1,10 +1,11 @@
 using System.Collections.Generic;
-using JamUp.ShaderUtility.Editor;
-using JamUp.StringUtility;
+
 using NUnit.Framework;
 using Unity.Mathematics;
-using UnityEngine;
 using Assert = UnityEngine.Assertions.Assert;
+
+using pbuddy.ShaderUtility.EditorScripts;
+using pbuddy.StringUtility.RuntimeScripts;
 
 namespace JamUp.Waves.EditModeTests
 {
@@ -25,7 +26,7 @@ namespace JamUp.Waves.EditModeTests
             
             public float3 RunFunctionAndGetOutput()
             {
-                var arguments = new NamedGPUFunctionArguments
+                var arguments = new NonspecificNamedGPUFunctionArguments
                 {
                     Argument0 = GPUFunctionArgument.In(Wave),
                     Argument1 = GPUFunctionArgument.In(Time),

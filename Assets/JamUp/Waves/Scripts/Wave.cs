@@ -1,7 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Unity.Mathematics;
+
+using pbuddy.StringUtility.RuntimeScripts;
 
 namespace JamUp.Waves
 {
@@ -34,7 +35,7 @@ namespace JamUp.Waves
 
         public override string ToString()
         {
-            return StringUtility.ToStringHelper.NameAndPublicData(this, true);
+            return this.NameAndPublicData(true);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 using UnityEngine;
 
-using static JamUp.StringUtility.ContextProvider;
+using static pbuddy.LoggingUtility.RuntimeScripts.ContextProvider;
 
 namespace JamUp.UnityUtility
 {

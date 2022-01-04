@@ -1,6 +1,7 @@
-using JamUp.ShaderUtility.Editor;
 using NUnit.Framework;
 using Assert = UnityEngine.Assertions.Assert;
+
+using pbuddy.ShaderUtility.EditorScripts;
 
 namespace JamUp.Waves.EditModeTests
 {
@@ -9,7 +10,7 @@ namespace JamUp.Waves.EditModeTests
         [Test]
         public void Test()
         {
-            var arguments = new NamelessGPUFunctionArguments(GPUFunctionArgument.In((uint)100));
+            var arguments = new UnnamedGPUFunctionArguments(GPUFunctionArgument.In((uint)100));
             arguments.SendToCgFunctionAndGetOutput("WaveFunctions", "GetTimeResolution", out float time);
             Assert.AreEqual(0.01f, time);
         }

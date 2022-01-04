@@ -1,10 +1,11 @@
 using System.Collections;
 using System.Linq;
-using JamUp.ShaderUtility.Editor;
-using NUnit.Framework;
+
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.TestTools;
+
+using pbuddy.ShaderUtility.EditorScripts;
 
 namespace JamUp.Waves
 {
@@ -25,7 +26,7 @@ namespace JamUp.Waves
 
             public float3 RunFunctionAndGetOutput()
             {
-                var arguments = new NamedGPUFunctionArguments()
+                var arguments = new NonspecificNamedGPUFunctionArguments()
                 {
                     Argument0 = GPUFunctionArgument.In(VertexIndex),
                     Argument1 = GPUFunctionArgument.In(SampleRate),

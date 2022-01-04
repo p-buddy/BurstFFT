@@ -1,0 +1,15 @@
+[submodule "Assets/pbuddy/LoggingUtility"]
+	path = Assets/pbuddy/LoggingUtility
+	url = git@github.com:p-buddy/LoggingUtility.git
+[submodule "Assets/pbuddy/StringUtility"]
+	path = Assets/pbuddy/StringUtility
+	url = git@github.com:p-buddy/StringUtility.git
+[submodule "Assets/pbuddy/ShaderUtility"]
+	path = Assets/pbuddy/ShaderUtility
+	url = git@github.com:p-buddy/ShaderUtility.git
+[submodule "Assets/pbuddy/TestUtility"]
+	path = Assets/pbuddy/TestUtility
+	url = git@github.com:p-buddy/TestUtility.git
+[submodule "Assets/pbuddy/CodeGenerationUtility"]
+	path = Assets/pbuddy/CodeGenerationUtility
+	url = git@github.com:p-buddy/CodeGenerationUtility.git
