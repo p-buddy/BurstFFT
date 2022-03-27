@@ -1,18 +1,24 @@
 [submodule "Assets/pbuddy/LoggingUtility"]
 	path = Assets/pbuddy/LoggingUtility
 	url = git@github.com:p-buddy/LoggingUtility.git
+	branch = main	
 [submodule "Assets/pbuddy/StringUtility"]
 	path = Assets/pbuddy/StringUtility
 	url = git@github.com:p-buddy/StringUtility.git
+	branch = main	
 [submodule "Assets/pbuddy/ShaderUtility"]
 	path = Assets/pbuddy/ShaderUtility
 	url = git@github.com:p-buddy/ShaderUtility.git
+	branch = main	
 [submodule "Assets/pbuddy/TestUtility"]
 	path = Assets/pbuddy/TestUtility
 	url = git@github.com:p-buddy/TestUtility.git
+	branch = main	
 [submodule "Assets/pbuddy/CodeGenerationUtility"]
 	path = Assets/pbuddy/CodeGenerationUtility
 	url = git@github.com:p-buddy/CodeGenerationUtility.git
+	branch = main	
 [submodule "Assets/pbuddy/TestsAsDocumentationUtility"]
 	path = Assets/pbuddy/TestsAsDocumentationUtility
 	url = git@github.com:p-buddy/TestsAsDocumentationUtility.git
+	branch = main	
