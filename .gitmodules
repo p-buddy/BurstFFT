@@ -13,3 +13,6 @@
 [submodule "Assets/pbuddy/CodeGenerationUtility"]
 	path = Assets/pbuddy/CodeGenerationUtility
 	url = git@github.com:p-buddy/CodeGenerationUtility.git
+[submodule "Assets/pbuddy/TestsAsDocumentationUtility"]
+	path = Assets/pbuddy/TestsAsDocumentationUtility
+	url = git@github.com:p-buddy/TestsAsDocumentationUtility.git

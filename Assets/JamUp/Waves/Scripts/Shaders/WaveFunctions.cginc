@@ -46,6 +46,11 @@ struct CoordinateAxes
     float3 Forward;
 };
 
+
+// Convert a given vertex index (there are 24 per wave segment,
+// 3 per the 8 triangular faces that form the shape that represents a 'sample' of a wave at a given point of time)
+// to which time segment of the wave it should correspond to.
+// In other words, 24 vertices will correspond to the same segment of the wave.
 float GetTimeForVertexIndex(in uint vertexIndex, in uint sampleRate)
 {
     const uint sampleIndex = vertexIndex / 24;

@@ -45,7 +45,6 @@ Shader "JamUp/ProdeduralWave"
       int WaveTypes[NumberOfSupportedWaves];
 
       float4 DisplacementAxes[NumberOfSupportedWaves];
-      
       float PropagationScale;
       float DisplacementScale;
       /* END SHADER SETTINGS */
