@@ -4,13 +4,13 @@ using pbuddy.StringUtility.RuntimeScripts;
 
 namespace JamUp.UnityUtility
 {
-    public struct ShaderProperty
+    public struct ShaderProperty<TData> 
     {
         public int ID;
 
-        public ShaderProperty(string name, string toRemove)
+        public ShaderProperty(string name, string toRemove = null)
         {
-            ID = Shader.PropertyToID(name.RemoveSubString(toRemove));
+            ID = Shader.PropertyToID(toRemove is null ? name : name.RemoveSubString(toRemove));
         }
     }
 }

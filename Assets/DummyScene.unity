@@ -152,29 +152,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e362e865cdac4a5a9051ca39d0f1f20b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  state:
-    serializableWaves:
-    - frequency: 1
-      amplitude: 1
-      waveType: 1
-      phaseDegrees: 0
-      displacementAxis:
-        x: 0
-        y: 1
-        z: 0
-    - frequency: 1
-      amplitude: 0
-      waveType: 1
-      phaseDegrees: 90
-      displacementAxis:
-        x: 1
-        y: 0
-        z: 0
-    sampleRate: 20
-    time: 3
-    thickness: 0.236
-    color: {r: 0.21960786, g: 0.21960786, b: 0.21960786, a: 0}
-    mode: 0
   material: {fileID: 2100000, guid: 7d0887929fac74bafb1ca0f59f1225e5, type: 2}
 --- !u!4 &638082616
 Transform:
@@ -186,7 +163,9 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -0.10668564, y: 0.15667152, z: 0.4999888}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
+  m_Children:
+  - {fileID: 1986689881}
+  - {fileID: 2056049049}
   m_Father: {fileID: 0}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -511,6 +490,156 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1 &1986689880
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1986689881}
+  - component: {fileID: 1986689882}
+  m_Layer: 0
+  m_Name: GameObject (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1986689881
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1986689880}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 638082616}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1986689882
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1986689880}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fae79609e784f5da6a705ab2746ad29, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  state:
+    serializableWaves:
+    - frequency: 1
+      amplitude: 1
+      waveType: 1
+      phaseDegrees: 0
+      displacementAxis:
+        x: 1
+        y: 0
+        z: 0
+    - frequency: 1
+      amplitude: 1
+      waveType: 1
+      phaseDegrees: 90
+      displacementAxis:
+        x: 0
+        y: 1
+        z: 0
+    - frequency: 2
+      amplitude: 0
+      waveType: 1
+      phaseDegrees: 90
+      displacementAxis:
+        x: 0
+        y: 1
+        z: 0
+    sampleRate: 8019
+    time: 2
+    duration: 10
+    thickness: 0.21
+    color: {r: 0, g: 0, b: 0, a: 0}
+    mode: 0
+--- !u!1 &2056049048
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2056049049}
+  - component: {fileID: 2056049050}
+  m_Layer: 0
+  m_Name: GameObject (2)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2056049049
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2056049048}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 638082616}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2056049050
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2056049048}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fae79609e784f5da6a705ab2746ad29, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  state:
+    serializableWaves:
+    - frequency: 1
+      amplitude: 1
+      waveType: 1
+      phaseDegrees: 0
+      displacementAxis:
+        x: 1
+        y: 0
+        z: 0
+    - frequency: 1
+      amplitude: 1
+      waveType: 1
+      phaseDegrees: 360
+      displacementAxis:
+        x: 0
+        y: 1
+        z: 0
+    - frequency: 2
+      amplitude: 0.3
+      waveType: 4
+      phaseDegrees: 360
+      displacementAxis:
+        x: 0
+        y: 1
+        z: 0
+    sampleRate: 100
+    time: 2
+    duration: 6
+    thickness: 0.21
+    color: {r: 0, g: 0, b: 0, a: 0}
+    mode: 0
 --- !u!1 &2130376285
 GameObject:
   m_ObjectHideFlags: 0

@@ -31,6 +31,7 @@ Shader "JamUp/ProdeduralWave"
       half Smoothness;
       half Metallic;
       half3 Emission;
+      float elapsedTime;
       
       float4x4 WaveOriginToWorldMatrix;
       float4x4 WorldToWaveOriginMatrix;
@@ -39,12 +40,11 @@ Shader "JamUp/ProdeduralWave"
       int WaveCount;
       float Thickness;
 
-      float Frequencies[NumberOfSupportedWaves];
-      float Amplitudes[NumberOfSupportedWaves];
-      float Phases[NumberOfSupportedWaves];
-      int WaveTypes[NumberOfSupportedWaves];
-
-      float4 DisplacementAxes[NumberOfSupportedWaves];
+      // (keyStartTime, keyEndTime, keyEndTime - keyStartTime);
+      float4 KeyTime;
+      float4 WaveData[NumberOfSupportedWaves * 2];
+      float4 DisplacementAxes[NumberOfSupportedWaves * 2];
+      
       float PropagationScale;
       float DisplacementScale;
       /* END SHADER SETTINGS */
@@ -73,12 +73,21 @@ Shader "JamUp/ProdeduralWave"
         const float timeResolution = GetTimeResolution(SampleRate);
         const float3 forward = mul(WaveOriginToWorldMatrix, float3(0, 0, 1));
 
+        const float initialTime = KeyTime.x, timeDelta = KeyTime.z;
+        float lerpTime = (_Time.y - initialTime) / timeDelta;
+
+          
         float3 samplePosition, nextSamplePosition;
         float3 sampleTangent, nextSampleTangent;
-        for (int index = 0; index < WaveCount; index++)
+        for (int index = 0; index < WaveCount * 2; index += 2)
         {
+            const float4 initial = WaveData[index];
+            const float4 target = WaveData[index + 1];
+            const float4 current = lerp(initial, target, _Time.y);
+            const float frequency = current.x, amplitude = current.y, phase = current.z;
+            const int type = initial.w;
             const float3 displacementAxis = DisplacementAxes[index].xyz;
-            const Wave wave = ConstructWave(Frequencies[index], Amplitudes[index], Phases[index], WaveTypes[index]);
+            const Wave wave = ConstructWave(frequency, amplitude, phase, type);
             AppendPositionAndTangent(time, timeResolution, wave, forward, displacementAxis, samplePosition, nextSamplePosition, sampleTangent, nextSampleTangent);
         }
         
@@ -99,6 +108,7 @@ Shader "JamUp/ProdeduralWave"
         // Transform modification
         unity_ObjectToWorld = WaveOriginToWorldMatrix;
         unity_WorldToObject = WorldToWaveOriginMatrix;
+        elapsedTime += unity_DeltaTime.x;  
       }
 
       void surf(Input IN, inout SurfaceOutputStandard o)

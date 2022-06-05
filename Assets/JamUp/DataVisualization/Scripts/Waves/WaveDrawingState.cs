@@ -32,6 +32,10 @@ namespace JamUp.DataVisualization.Waves
         [SerializeField]
         [Range(0.1f, 10f)]
         public float time;
+        
+        [SerializeField]
+        [Range(0.1f, 10f)]
+        public float duration;
 
         [SerializeField]
         [Range(float.Epsilon, 1f)]
