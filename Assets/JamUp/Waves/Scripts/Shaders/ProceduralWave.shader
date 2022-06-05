@@ -35,10 +35,14 @@ Shader "JamUp/ProdeduralWave"
       
       float4x4 WaveOriginToWorldMatrix;
       float4x4 WorldToWaveOriginMatrix;
-      
+
+      // (SampleRate, Thickness, Smoothness)
+      float4 GlobalData[2];
       int SampleRate;
-      int WaveCount;
       float Thickness;
+
+      int WaveCount;
+
 
       // (keyStartTime, keyEndTime, keyEndTime - keyStartTime);
       float4 KeyTime;
@@ -74,8 +78,7 @@ Shader "JamUp/ProdeduralWave"
         const float3 forward = mul(WaveOriginToWorldMatrix, float3(0, 0, 1));
 
         const float initialTime = KeyTime.x, timeDelta = KeyTime.z;
-        float lerpTime = (_Time.y - initialTime) / timeDelta;
-
+        const float lerpTime = smoothstep(0, 1, (_Time.y - initialTime) / timeDelta);
           
         float3 samplePosition, nextSamplePosition;
         float3 sampleTangent, nextSampleTangent;
@@ -83,7 +86,7 @@ Shader "JamUp/ProdeduralWave"
         {
             const float4 initial = WaveData[index];
             const float4 target = WaveData[index + 1];
-            const float4 current = lerp(initial, target, _Time.y);
+            const float4 current = lerp(initial, target, lerpTime);
             const float frequency = current.x, amplitude = current.y, phase = current.z;
             const int type = initial.w;
             const float3 displacementAxis = DisplacementAxes[index].xyz;

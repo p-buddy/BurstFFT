@@ -1,14 +1,11 @@
 {
-    "name": "JamUp.Waves.EditModeTests",
+    "name": "JamUp.TypescriptGenerator.EditModeTests",
     "rootNamespace": "",
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "Unity.Mathematics",
-        "JamUp.Waves.Scripts",
-        "pbuddy.ShaderUtility.EditorScripts",
-        "pbuddy.StringUtility.RuntimeScripts",
-        "JamUp.JavascriptRunner.Scripts"
+        "JamUp.TypescriptGenerator.Scripts",
+        "Unity.Mathematics"
     ],
     "includePlatforms": [
         "Editor"
