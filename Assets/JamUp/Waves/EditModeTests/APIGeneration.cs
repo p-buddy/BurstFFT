@@ -12,6 +12,7 @@ namespace JamUp.Waves.EditModeTests
         public const string InternalInitFunc = "internalInit";
         public const string InternalAddAtFunc = "internalAddAt";
         
+        // Add internalize function
         private static readonly string Functions = $@"
 export const init = (frame: {nameof(KeyFrame)}): void => {{
     // @ts-ignore
