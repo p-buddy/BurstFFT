@@ -1,8 +1,8 @@
-using System;
 using System.Dynamic;
-using JamUp.Waves;
+using JamUp.TypescriptGenerator.Scripts;
+using JamUp.Waves.Scripts.API;
 
-namespace JamUp.Waves
+namespace JamUp.Waves.Scripts
 {
     public class WaveAnimationParser
     {
@@ -16,6 +16,6 @@ namespace JamUp.Waves
             KeyFrame frame = CastToFrame(obj);
         }
 
-        private KeyFrame CastToFrame(ExpandoObject obj) => Converter.ToKeyFrame(obj);
+        private KeyFrame CastToFrame(ExpandoObject obj) => Converter.To<KeyFrame>(obj);
     }
 }

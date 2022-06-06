@@ -1,7 +1,6 @@
-using JamUp.Waves;
 using Unity.Mathematics;
 
-namespace JamUp.Waves
+namespace JamUp.Waves.Scripts.API
 {
     public struct WaveState
     {
@@ -10,5 +9,9 @@ namespace JamUp.Waves
         public WaveType WaveType { get; set; }
         public float PhaseDegrees { get; set; }
         public SimpleFloat3 DisplacementAxis { get; set; }
+
+        public static implicit operator Wave(WaveState state) =>
+            new Wave(state.WaveType, state.Frequency, math.radians(state.PhaseDegrees), state.Amplitude);
+
     }
 }

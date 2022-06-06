@@ -3,9 +3,8 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
-using UnityEngine.Assertions;
 
-namespace JamUp.Waves
+namespace JamUp.Waves.Scripts
 {
     public static class WaveDataFactory
     {

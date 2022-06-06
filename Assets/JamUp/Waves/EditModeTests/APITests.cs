@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using JamUp.JavascriptRunner.Scripts;
+using JamUp.Waves.Scripts.API;
 using NUnit.Framework;
 using UnityEngine;
+using Assert = UnityEngine.Assertions.Assert;
+using TsConverter = JamUp.TypescriptGenerator.Scripts.Converter;
 
 namespace JamUp.Waves.EditModeTests
 {
@@ -11,42 +14,18 @@ namespace JamUp.Waves.EditModeTests
     {
         void TestInit(object any)
         {
-            KeyFrame frame = Converter.ToKeyFrame(any as ExpandoObject);
+            KeyFrame frame = TsConverter.To<KeyFrame>(any as ExpandoObject);
+            
+            Assert.AreEqual(frame.SampleRate, 100);
+            Assert.AreEqual(frame.Time, 100.5f);
+            Assert.AreEqual(frame.Thickness, 100.5f);
+            
         }
 
         [Test]
-        public void Declaration()
+        public void LogAPI()
         {
-            Debug.Log(Generator.APIDeclaration());
-            
-            /*
-             *
-export type KeyFrame = {
-    sampleRate: number;
-    time: number;
-    thickness: number;
-    duration: number;
-    waves: WaveState[];
-};
-export type WaveState = {
-    frequency: number;
-    amplitude: number;
-    waveType: WaveType;
-    phaseDegrees: number;
-    displacementAxis: SimpleFloat3;
-};
-export enum WaveType {
-    Sine = 'Sine',
-    Square = 'Square',
-    Triangle = 'Triangle',
-    Sawtooth = 'Sawtooth',
-}
-export type SimpleFloat3 = {
-    x: number;
-    y: number;
-    z: number;
-};
-             */
+            Debug.Log(APIGeneration.GenerateDeclarations());
         }
         
         [Test]
@@ -58,15 +37,16 @@ let obj = {{
     time: {100.5},
     thickness: {1.4},
     duration: {10.5},
-    waves: [{{frequency: {3.5}, waveType: 'Sine'}}, {{amplitude: {5.0}, waveType: 'Triangle'}}],
+    waves: [{{frequency: {3.5}, waveType: 'Sine', displacementAxis: {{x: 1, y: 2, z: 3}}}}, {{amplitude: {5.0}, waveType: 'Triangle', displacementAxis: {{x: 4, y: 5, z: 6}}}}],
 }};
 
-init(obj);
+{APIGeneration.InternalInitFunc}(obj);
 ";
+            
            Runner.ExecuteString(code,
                                 context =>
                                 {
-                                    context.AddFunction<Action<object>>("init", TestInit);
+                                    context.AddFunction<Action<object>>(APIGeneration.InternalInitFunc, TestInit);
                                 }); 
         }
     }

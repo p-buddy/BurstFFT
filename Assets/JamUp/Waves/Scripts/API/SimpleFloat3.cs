@@ -1,7 +1,7 @@
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace JamUp.Waves
+namespace JamUp.Waves.Scripts.API
 {
     public struct SimpleFloat3
     {

@@ -1,15 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using JamUp.UnityUtility;
-using JamUp.Waves;
-using Unity.Collections;
+using JamUp.Waves.Scripts.API;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Rendering;
 
-namespace JamUp.Waves
+namespace JamUp.Waves.Scripts
 {
     public class DrawProceduralWave : MonoBehaviour
     {
@@ -83,8 +81,8 @@ namespace JamUp.Waves
             for (var waveIndex = 0; waveIndex < numberOfWaves; waveIndex++)
             {
                 int dataIndex = 2 * waveIndex;
-                Wave start = Converter.FromState(initial.Waves[waveIndex]);
-                Wave end = Converter.FromState(target.Waves[waveIndex]);
+                Wave start = initial.Waves[waveIndex];
+                Wave end = target.Waves[waveIndex];
 
                 waveData[dataIndex] = new Vector4(start.Frequency, start.Amplitude, start.PhaseOffset, (float)start.WaveType);
                 displacementAxes[dataIndex] = new float4(initial.Waves[waveIndex].DisplacementAxis, 0f);

@@ -17,10 +17,5 @@ namespace JamUp.TypescriptGenerator.Scripts
             var context = new DefaultCodeGenerationContext();
             return String.Join(Environment.NewLine, generator.Generate().ToList().Select(unit => unit.GenerateCode(context)));
         }
-
-        public static TEnum ConvertEnumValueBack<TEnum>(string jsValue) where TEnum: Enum
-        {
-            return (TEnum)Enum.Parse(typeof(TEnum), jsValue);
-        }
     }
 }

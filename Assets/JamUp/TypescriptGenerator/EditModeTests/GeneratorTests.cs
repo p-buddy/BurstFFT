@@ -33,14 +33,8 @@ namespace JamUp.TypescriptGenerator.EditModeTests
         public void EnumType()
         {
             Debug.Log(Generator.CodeForType<Dummy>());
-            var names = Enum.GetNames(typeof(Dummy));
-            var values = Enum.GetValues(typeof(Dummy)) as Dummy[];
             
-            Assert.NotNull(values);
-            names.ToList().Select((name, index) => (name: name, index: index)).ToList().ForEach((tuple =>
-            {
-                Assert.AreEqual(Generator.ConvertEnumValueBack<Dummy>(tuple.name), values[tuple.index]);
-            }));
+            
         }
         
         private struct Nested

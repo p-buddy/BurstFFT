@@ -1,4 +1,4 @@
-namespace JamUp.Waves
+namespace JamUp.Waves.Scripts
 {
     public enum WaveType
     {

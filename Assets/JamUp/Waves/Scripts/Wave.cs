@@ -1,10 +1,9 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using pbuddy.StringUtility.RuntimeScripts;
 using Unity.Mathematics;
 
-using pbuddy.StringUtility.RuntimeScripts;
-
-namespace JamUp.Waves
+namespace JamUp.Waves.Scripts
 {
     public readonly struct Wave : IEqualityComparer<Wave>
     {

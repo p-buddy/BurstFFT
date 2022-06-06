@@ -1,7 +1,7 @@
 using System.Collections;
 
 using JamUp.Waves;
-
+using JamUp.Waves.Scripts;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.TestTools;
