@@ -1,12 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
-using JamUp.JavascriptRunner.Scripts;
 using JamUp.Waves.Scripts.API;
 using NUnit.Framework;
+using pbuddy.TypeScriptingUtility.RuntimeScripts;
 using UnityEngine;
 using Assert = UnityEngine.Assertions.Assert;
-using TsConverter = JamUp.TypescriptGenerator.Scripts.Converter;
 
 namespace JamUp.Waves.EditModeTests
 {
@@ -14,7 +13,7 @@ namespace JamUp.Waves.EditModeTests
     {
         void TestInit(object any)
         {
-            KeyFrame frame = TsConverter.To<KeyFrame>(any as ExpandoObject);
+            KeyFrame frame = JaToClrConverter.To<KeyFrame>(any as ExpandoObject);
             
             Assert.AreEqual(frame.SampleRate, 100);
             Assert.AreEqual(frame.Time, 100.5f);
@@ -43,7 +42,7 @@ let obj = {{
 {APIGeneration.InternalInitFunc}(obj);
 ";
             
-           Runner.ExecuteString(code,
+           JsRunner.ExecuteString(code,
                                 context =>
                                 {
                                     context.AddFunction<Action<object>>(APIGeneration.InternalInitFunc, TestInit);

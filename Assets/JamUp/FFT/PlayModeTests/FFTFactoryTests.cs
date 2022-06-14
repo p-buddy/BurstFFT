@@ -14,6 +14,7 @@ using UnityEngine.TestTools;
 using JamUp.DataVisualization;
 using JamUp.Math;
 using JamUp.Waves;
+using JamUp.Waves.Scripts;
 
 namespace JamUp.FFT.PlayModeTests
 {

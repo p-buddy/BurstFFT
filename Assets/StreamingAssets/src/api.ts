@@ -35,3 +35,30 @@ export const addAt = (frame: KeyFrame, time: number): void => {
     // @ts-ignore
     addAtInternal(frame, time);
 };
+
+export let x: 4;
+
+export class X {
+    
+}
+
+class A {
+    internal: any;
+
+    get language(): number {
+        return this.internal._language;
+    }
+
+    constructor(time: 4) {
+        // @ts-ignore
+        this.internal = new A_internal(time);
+    }
+
+    doSomething = (): number => this.internal.doSomething();
+    doSomethingElse = (x: number): number => this.internal.doSomethingElse(x);
+}
+
+// A_internal is a registered type that knows how to convert the javascript dyno object args to what c# wants
+
+const y = new A(4);
+y.doSomethingElse(y.language);

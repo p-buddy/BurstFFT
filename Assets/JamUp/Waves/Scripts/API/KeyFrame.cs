@@ -1,11 +1,11 @@
 namespace JamUp.Waves.Scripts.API
 {
-    public struct KeyFrame
+    public readonly struct KeyFrame
     {
-        public int SampleRate { get; set; }
-        public float Time { get; set; }
-        public float Thickness { get; set; }
-        public float Duration { get; set; }
-        public WaveState[] Waves { get; set; }
+        public int SampleRate { get; }
+        public float Time { get; }
+        public float Thickness { get; }
+        public float Duration { get; }
+        public WaveState[] Waves { get; }
     }
 }

@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using JamUp.TypescriptGenerator.Scripts;
 using JamUp.Waves.Scripts.API;
 using NUnit.Framework;
 using UnityEngine;
@@ -28,7 +27,8 @@ export const addAt = (frame: {nameof(KeyFrame)}, time: number): void => {{
         private static string ApiFile = "api.ts";
         public static string GenerateDeclarations()
         {
-            return Generator.CodeForType<KeyFrame>();
+            //return Generator.CodeForType<KeyFrame>();
+            return "";
         }
 
         [Test]

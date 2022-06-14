@@ -10,6 +10,7 @@
   ],
   "dependencies": {
     "com.unity.burst": "1.4.11",
+    "com.unity.code-analysis": "0.1.2-preview",
     "com.unity.entities": "0.17.0-preview.42",
     "com.unity.ide.rider": "2.0.7",
     "com.unity.mathematics": "1.2.5",
@@ -17,6 +18,7 @@
     "com.unity.textmeshpro": "3.0.6",
     "org.nuget.system.memory": "4.5.3",
     "com.unity.modules.physics": "1.0.0",
-    "com.unity.modules.ui": "1.0.0"
+    "com.unity.modules.ui": "1.0.0",
+    "com.unity.modules.unitywebrequest": "1.0.0"
   }
 }

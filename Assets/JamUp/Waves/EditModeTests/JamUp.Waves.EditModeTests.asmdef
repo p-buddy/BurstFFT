@@ -8,8 +8,7 @@
         "JamUp.Waves.Scripts",
         "pbuddy.ShaderUtility.EditorScripts",
         "pbuddy.StringUtility.RuntimeScripts",
-        "JamUp.JavascriptRunner.Scripts",
-        "JamUp.TypescriptGenerator.Scripts"
+        "pbuddy.TypeScriptingUtility.RuntimeScripts"
     ],
     "includePlatforms": [
         "Editor"
