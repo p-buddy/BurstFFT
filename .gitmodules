@@ -22,3 +22,6 @@
 	path = Assets/pbuddy/TestsAsDocumentationUtility
 	url = git@github.com:p-buddy/TestsAsDocumentationUtility.git
 	branch = main	
+[submodule "Assets/pbuddy/TypeScriptingUtility"]
+	path = Assets/pbuddy/TypeScriptingUtility
+	url = git@github.com:p-buddy/TypeScriptingUtility.git
