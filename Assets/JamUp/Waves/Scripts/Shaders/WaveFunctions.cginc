@@ -12,12 +12,20 @@ float GetValueAtTime(in Wave wave, in float time)
     const float rotationAmount = TimeToRadians(time) * wave.Frequency + wave.PhaseRadians;
     const float sineValue = sin(rotationAmount);
 
-    const float sineFactor = float(SineWaveType & wave.WaveType) * wave.Amplitude * sineValue;
-    const float squareFactor = float((SquareWaveType & wave.WaveType) >> 1) * wave.Amplitude * sign(sineValue);
-    const float triangleFactor = float((TriangleWaveType & wave.WaveType) >> 2) * wave.Amplitude * TwoOverPI * asin(sineValue);
-    const float sawToothFactor = float((SawtoothWaveType & wave.WaveType) >> 3) * wave.Amplitude * -TwoOverPI * atan(1.0f / tan(rotationAmount - PIOverTwo));
+    const float sineFactor = wave.Amplitude * sineValue;
+    const float squareFactor = wave.Amplitude * sign(sineValue);
+    const float triangleFactor = wave.Amplitude * TwoOverPI * asin(sineValue);
+    const float sawToothFactor = wave.Amplitude * -TwoOverPI * atan(1.0f / tan(rotationAmount - PIOverTwo));
+
+    const float2 lerp = float2(1 - wave.TypeRatio, wave.TypeRatio);
     
-    return sineFactor + squareFactor + triangleFactor + sawToothFactor;
+    const float2 sine = sineFactor * float2(SineWaveType & wave.WaveType) * lerp;
+    const float2 square = squareFactor * float2((SquareWaveType & wave.WaveType) >> 1) * lerp;
+    const float2 tri = triangleFactor * float2((TriangleWaveType & wave.WaveType) >> 2) * lerp;
+    const float2 sawtooth = sawToothFactor * float2((SawtoothWaveType & wave.WaveType) >> 3) * lerp;
+    const float2 sum = sine + square + tri + sawtooth;
+    
+    return dot(sum, 1);
 }
 
 float3 GetDisplacementAtTime(in Wave wave, in float time, in float3 displacementVector, in float3 propagationAxis)

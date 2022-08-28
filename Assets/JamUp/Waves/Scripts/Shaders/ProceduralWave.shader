@@ -88,9 +88,8 @@ Shader "JamUp/ProdeduralWave"
             const float4 target = WaveData[index + 1];
             const float4 current = lerp(initial, target, lerpTime);
             const float frequency = current.x, amplitude = current.y, phase = current.z;
-            const int type = initial.w;
-            const float3 displacementAxis = DisplacementAxes[index].xyz;
-            const Wave wave = ConstructWave(frequency, amplitude, phase, type);
+            const float3 displacementAxis = lerp(DisplacementAxes[index].xyz, DisplacementAxes[index + 1].xyz, lerpTime);
+            const Wave wave = ConstructWave(frequency, amplitude, phase, initial.w, target.w, lerpTime);
             AppendPositionAndTangent(time, timeResolution, wave, forward, displacementAxis, samplePosition, nextSamplePosition, sampleTangent, nextSampleTangent);
         }
         
