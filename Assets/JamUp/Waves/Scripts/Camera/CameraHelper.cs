@@ -16,6 +16,11 @@ namespace JamUp.Waves.Scripts.Camera
             Matrices = new NativeArray<float4x4>(1, Allocator.Persistent);
         }
 
+        public static void Dispose()
+        {
+            Matrices.Dispose();
+        }
+
         [BurstCompile]
         public static float4x4 Lerp(float4x4 from, float4x4 to, float lerpTime)
         {

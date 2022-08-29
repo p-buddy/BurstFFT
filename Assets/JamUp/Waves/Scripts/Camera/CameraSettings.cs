@@ -6,11 +6,12 @@ namespace JamUp.Waves.Scripts.Camera
         public float VerticalFieldOfView { get; }
         public float NearClippingPlane { get; }
         public float FarClippingPlane { get; }
-
-        public CameraSettings(float orthographicSize = 5f,
-                              float verticalFieldOfView = 60f,
-                              float nearClippingPlane = 0.3f,
-                              float farClippingPlane = 100f)
+        public static CameraSettings Default => new CameraSettings(5f, 60f, 0.3f, 1000f);
+        
+        public CameraSettings(float orthographicSize,
+                              float verticalFieldOfView,
+                              float nearClippingPlane,
+                              float farClippingPlane)
         {
             OrthographicSize = orthographicSize;
             VerticalFieldOfView = verticalFieldOfView;

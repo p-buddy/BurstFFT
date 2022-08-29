@@ -1,9 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using JamUp.UnityUtility;
 using JamUp.Waves.Scripts.API;
-using pbuddy.StringUtility.RuntimeScripts;
+using JamUp.Waves.Scripts.Camera;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -15,7 +14,10 @@ namespace JamUp.Waves.Scripts
     {
         [TextArea(50, int.MaxValue)]
         public string TestField;
-        
+
+        private UnityEngine.Camera camera;
+        private CameraSettings settings;
+
         private KeyFrame[] states;
         private int currentIndex;
         private int numberOfWaves;
@@ -39,6 +41,9 @@ namespace JamUp.Waves.Scripts
 
         private void Start()
         {
+            camera = UnityEngine.Camera.main;
+            settings = CameraSettings.Default;
+            
             propertyBlock = new MaterialPropertyBlock();
             WaveCount = new ShaderProperty<int>(nameof(WaveCount));
             SampleRate = new ShaderProperty<int>(nameof(SampleRate));
@@ -58,21 +63,34 @@ namespace JamUp.Waves.Scripts
             SetDynamicProperties(states[currentIndex], nextState);
         }
 
+        private void OnDestroy()
+        {
+            CameraHelper.Dispose();
+        }
+
         private bool DurationMet() => Time.timeSinceLevelLoad - lastSetTime >= states[currentIndex].Duration;
         private bool OnLastIndex() => currentIndex == states.Length - 1;
 
         private void Update()
         {
+            bool isLast = OnLastIndex();
             KeyFrame current = states[currentIndex];
+            KeyFrame next = isLast ? current : states[currentIndex + 1];
         
             if (!OnLastIndex() && DurationMet())
             {
                 current = states[++currentIndex];
-                SetDynamicProperties(current, OnLastIndex() ? current : states[currentIndex + 1]);
+                next = OnLastIndex() ? current : states[currentIndex + 1];
+                SetDynamicProperties(current, next);
             }
 
             Bounds bounds = new Bounds(transform.position, Vector3.one * 50f);
-            int numberOfVertices = 24 * (int)(current.Time / (1f / current.SampleRate));
+            
+            float lerpTime = (Time.timeSinceLevelLoad - lastSetTime) / states[currentIndex].Duration;
+            int sampleRate = current.SampleRate + (int)((next.SampleRate - current.SampleRate) * lerpTime);
+            float time = current.Time + (next.Time - current.Time) * lerpTime;
+            int numberOfVertices = 24 * (int)(time / (1f / sampleRate));
+            CameraHelper.LerpProjection(camera, current.Projection, next.Projection, lerpTime, in settings);
             Graphics.DrawProcedural(material, bounds, MeshTopology.Triangles, numberOfVertices, 0, null, propertyBlock, ShadowCastingMode.TwoSided);
         }
 
@@ -96,8 +114,8 @@ namespace JamUp.Waves.Scripts
             
             
             
-            propertyBlock.SetProperty(KeyTime, new float4(Time.timeSinceLevelLoad,
-                                                          Time.timeSinceLevelLoad + initial.Duration,
+            propertyBlock.SetProperty(KeyTime, new float4(Time.timeSinceLevelLoad, 
+                                                          Time.timeSinceLevelLoad + initial.Duration, 
                                                           initial.Duration,
                                                           0f));
             

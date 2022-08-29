@@ -28,10 +28,10 @@ namespace JamUp.Waves.Scripts.Camera
             {
                 case Projection.Orthographic:
                     float horizontal = Settings.OrthographicSize * aspect;
-                    Result[0] = float4x4.OrthoOffCenter(-horizontal, 
-                                                        horizontal,
-                                                        -Settings.OrthographicSize,
+                    Result[0] = float4x4.OrthoOffCenter(horizontal, 
+                                                        -horizontal,
                                                         Settings.OrthographicSize,
+                                                        -Settings.OrthographicSize,
                                                         Settings.NearClippingPlane,
                                                         Settings.FarClippingPlane);
                     return;

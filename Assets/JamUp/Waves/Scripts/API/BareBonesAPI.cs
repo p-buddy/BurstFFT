@@ -9,7 +9,7 @@ namespace JamUp.Waves.Scripts.API
 {
     /// <summary>
     /// <example>
-    /// +=0 t=1 th=0.1 s=1000 pr=p
+    /// +=1 t=1 th=0.1 s=1000 pr=per
     /// f=1 p=0 a=1 w=sine d=1,0,0
     /// f=1 p=90 a=1 w=sine d=0,1,0
     /// </example>
@@ -18,6 +18,7 @@ namespace JamUp.Waves.Scripts.API
     {
         private static class Parse
         {
+            internal static Object Int(string query) => Int32.Parse(query);
             internal static object Float(string query) => float.Parse(query);
             
             internal static object _Enum<T>(string query)
@@ -51,7 +52,7 @@ namespace JamUp.Waves.Scripts.API
                         {NewFrameKey, (nameof(KeyFrame.Duration), Parse.Float)},
                         {"th", (nameof(KeyFrame.Thickness), Parse.Float)},
                         {"t", (nameof(KeyFrame.Time), Parse.Float)},
-                        {"s", (nameof(KeyFrame.SampleRate), Parse.Float)},
+                        {"s", (nameof(KeyFrame.SampleRate), Parse.Int)},
                         {"pr", (nameof(KeyFrame.Projection), Parse._Enum<Projection>)}
                     }
                 },
@@ -83,12 +84,11 @@ namespace JamUp.Waves.Scripts.API
 
             KeyFrame defaultFrame = new KeyFrame(1f, 1000, Projection.Orthographic, 0.1f, null, 10f);
             WaveState defaultWave = new WaveState(1f, 1f, 0f, WaveType.Sine, new SimpleFloat3(1f, 0, 0));
-
-            // Check for first line,
-            // Parse durations after the fact
-            foreach (string line in lines)
+            
+            for (var index = 0; index < lines.Length; index++)
             {
-                if (line.StartsWith(NewFrameKey))
+                string line = lines[index];
+                if (index == 0 || line.StartsWith(NewFrameKey))
                 {
                     KeyFrame frame = ParseLine(line, defaultFrame);
                     frames.Add(frame);
@@ -96,16 +96,16 @@ namespace JamUp.Waves.Scripts.API
                 }
 
                 WaveState state = ParseLine(line, defaultWave);
-                
+
                 if (waves.Count < frames.Count)
                 {
-                    waves.Add(new List<WaveState> {state});
+                    waves.Add(new List<WaveState> { state });
                     continue;
                 }
-                
+
                 waves[frames.Count - 1].Add(state);
             }
-            
+
             return frames.Select((frame, index) => AddWaves(frame, waves[index])).ToArray();
         }
 
