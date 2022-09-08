@@ -1,3 +1,9 @@
+UserSettings
+.vs/
+Assets/.idea/
+*.sln.*
+obj
+
 # Windows
 Thumbs.db
 Desktop.ini

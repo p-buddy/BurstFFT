@@ -18,7 +18,7 @@ namespace JamUp.Waves.Scripts.API
     {
         private static class Parse
         {
-            internal static Object Int(string query) => Int32.Parse(query);
+            internal static object Int(string query) => Int32.Parse(query);
             internal static object Float(string query) => float.Parse(query);
             
             internal static object _Enum<T>(string query)

@@ -7,7 +7,7 @@ namespace JamUp.NativeArrayUtility
 {
     public struct CompareNativeArraysJob<TData, TNativeArrayIdentifier, TComparisonEvent> : IJobParallelFor
         where TData : struct, IEquatable<TData>
-        where TComparisonEvent : struct, INativeArrayComparisonEvent<TComparisonEvent, TNativeArrayIdentifier, int>
+        where TComparisonEvent : unmanaged, INativeArrayComparisonEvent<TComparisonEvent, TNativeArrayIdentifier, int>
     {
         [ReadOnly]
         public TNativeArrayIdentifier IdentifierA;
