@@ -1,6 +1,6 @@
 namespace JamUp.Waves.Scripts
 {
-    public enum Projection
+    public enum ProjectionType
     {
         Orthographic,
         Perspective

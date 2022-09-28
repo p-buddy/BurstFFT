@@ -1,4 +1,4 @@
-namespace JamUp.Waves.Scripts.Camera
+namespace JamUp.Waves.Scripts
 {
     public readonly struct CameraSettings
     {

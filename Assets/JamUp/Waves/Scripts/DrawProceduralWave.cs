@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using JamUp.UnityUtility;
 using JamUp.Waves.Scripts.API;
-using JamUp.Waves.Scripts.Camera;
+using JamUp.Waves.Scripts;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -88,11 +88,26 @@ namespace JamUp.Waves.Scripts
             
             float lerpTime = (Time.timeSinceLevelLoad - lastSetTime) / states[currentIndex].Duration;
             int sampleRate = current.SampleRate + (int)((next.SampleRate - current.SampleRate) * lerpTime);
-            float time = current.Time + (next.Time - current.Time) * lerpTime;
+            float time = current.SignalLength + (next.SignalLength - current.SignalLength) * lerpTime;
             int numberOfVertices = 24 * (int)(time / (1f / sampleRate));
-            CameraHelper.LerpProjection(camera, current.Projection, next.Projection, lerpTime, in settings);
+            CameraHelper.LerpProjection(camera, current.ProjectionType, next.ProjectionType, lerpTime, in settings);
             Graphics.DrawProcedural(material, bounds, MeshTopology.Triangles, numberOfVertices, 0, null, propertyBlock, ShadowCastingMode.TwoSided);
         }
+        
+        // 
+        
+        // Entity:
+        // CurrentTransition
+        // - WaveStart
+        // - WaveEnd
+        // Transition Index
+        // - Keyframes
+        
+        
+        
+        // Every Entity Has a Buffer Of Keyframes
+        // Every Keyframe buffer references an entity that's a buffer of waves
+        // Or should there be a transition component? And there's a buffer of transitions?
 
         private void SetDynamicProperties(KeyFrame initial, KeyFrame target)
         {
@@ -103,13 +118,13 @@ namespace JamUp.Waves.Scripts
             for (var waveIndex = 0; waveIndex < numberOfWaves; waveIndex++)
             {
                 int dataIndex = 2 * waveIndex;
-                Wave start = initial.Waves[waveIndex];
-                Wave end = target.Waves[waveIndex];
+                Wave start = (WaveState)initial.Waves[waveIndex];
+                Wave end = (WaveState)target.Waves[waveIndex];
 
                 waveData[dataIndex] = new Vector4(start.Frequency, start.Amplitude, start.PhaseOffset, (float)start.WaveType);
-                displacementAxes[dataIndex] = new float4(initial.Waves[waveIndex].DisplacementAxis, 0f);
+                displacementAxes[dataIndex] = new float4(initial.Waves[waveIndex].Value.DisplacementAxis, 0f);
                 waveData[dataIndex + 1] = new Vector4(end.Frequency, end.Amplitude, end.PhaseOffset, (float)end.WaveType);
-                displacementAxes[dataIndex + 1] = new float4(target.Waves[waveIndex].DisplacementAxis, 0f);
+                displacementAxes[dataIndex + 1] = new float4(target.Waves[waveIndex].Value.DisplacementAxis, 0f);
             }
             
             

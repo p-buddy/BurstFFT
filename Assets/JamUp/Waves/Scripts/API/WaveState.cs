@@ -24,6 +24,6 @@ namespace JamUp.Waves.Scripts.API
         }
         
         public static implicit operator Wave(WaveState state) =>
-            new Wave(state.WaveType, state.Frequency, math.radians(state.PhaseDegrees), state.Amplitude);
+            new (state.WaveType, state.Frequency, math.radians(state.PhaseDegrees), state.Amplitude);
     }
 }

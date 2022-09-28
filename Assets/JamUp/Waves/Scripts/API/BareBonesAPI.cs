@@ -51,9 +51,9 @@ namespace JamUp.Waves.Scripts.API
                     {
                         {NewFrameKey, (nameof(KeyFrame.Duration), Parse.Float)},
                         {"th", (nameof(KeyFrame.Thickness), Parse.Float)},
-                        {"t", (nameof(KeyFrame.Time), Parse.Float)},
+                        {"t", (nameof(KeyFrame.SignalLength), Parse.Float)},
                         {"s", (nameof(KeyFrame.SampleRate), Parse.Int)},
-                        {"pr", (nameof(KeyFrame.Projection), Parse._Enum<Projection>)}
+                        {"pr", (nameof(KeyFrame.ProjectionType), Parse._Enum<ProjectionType>)}
                     }
                 },
                 {
@@ -82,7 +82,7 @@ namespace JamUp.Waves.Scripts.API
             List<KeyFrame> frames = new List<KeyFrame>();
             List<List<WaveState>> waves = new List<List<WaveState>>();
 
-            KeyFrame defaultFrame = new KeyFrame(1f, 1000, Projection.Orthographic, 0.1f, null, 10f);
+            KeyFrame defaultFrame = new KeyFrame(1f, 1000, ProjectionType.Orthographic, 0.1f, null, 10f);
             WaveState defaultWave = new WaveState(1f, 1f, 0f, WaveType.Sine, new SimpleFloat3(1f, 0, 0));
             
             for (var index = 0; index < lines.Length; index++)
@@ -128,7 +128,7 @@ namespace JamUp.Waves.Scripts.API
 
         private static KeyFrame AddWaves(in KeyFrame frame, List<WaveState> waves)
         {
-            return new KeyFrame(frame.Duration, frame.SampleRate, frame.Projection, frame.Thickness, waves.ToArray(), frame.Time);
+            return new KeyFrame(frame.Duration, frame.SampleRate.Value, frame.ProjectionType.Value, frame.Thickness.Value, waves.ToArray(), frame.SignalLength.Value);
         }
 
         private static FieldInfo GetBackingField(Type type, PropertyInfo property)

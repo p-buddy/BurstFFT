@@ -1,13 +1,15 @@
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 
-namespace JamUp.Waves.Scripts.Camera
+namespace JamUp.Waves.Scripts
 {
+    [BurstCompile]
     public struct InitMatrixJob : IJob
     {
         [ReadOnly]
-        public Projection Projection;
+        public ProjectionType ProjectionType;
         
         [ReadOnly] 
         public CameraSettings Settings;
@@ -24,9 +26,9 @@ namespace JamUp.Waves.Scripts.Camera
         public void Execute()
         {
             float aspect = (float)Width / Height;
-            switch (Projection)
+            switch (ProjectionType)
             {
-                case Projection.Orthographic:
+                case ProjectionType.Orthographic:
                     float horizontal = Settings.OrthographicSize * aspect;
                     Result[0] = float4x4.OrthoOffCenter(horizontal, 
                                                         -horizontal,
@@ -35,7 +37,7 @@ namespace JamUp.Waves.Scripts.Camera
                                                         Settings.NearClippingPlane,
                                                         Settings.FarClippingPlane);
                     return;
-                case Projection.Perspective:
+                case ProjectionType.Perspective:
                     Result[0] = float4x4.PerspectiveFov(Settings.VerticalFieldOfView,
                                                         aspect,
                                                         Settings.NearClippingPlane,

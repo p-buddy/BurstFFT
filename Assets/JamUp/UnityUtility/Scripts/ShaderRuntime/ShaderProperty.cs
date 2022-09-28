@@ -4,9 +4,9 @@ using pbuddy.StringUtility.RuntimeScripts;
 
 namespace JamUp.UnityUtility
 {
-    public struct ShaderProperty<TData> 
+    public readonly struct ShaderProperty<TData> 
     {
-        public int ID;
+        public readonly int ID;
 
         public ShaderProperty(string name, string toRemove = null)
         {

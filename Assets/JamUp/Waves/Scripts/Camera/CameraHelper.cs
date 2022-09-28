@@ -4,7 +4,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace JamUp.Waves.Scripts.Camera
+namespace JamUp.Waves.Scripts
 {
     [BurstCompile]
     public static class CameraHelper
@@ -35,8 +35,8 @@ namespace JamUp.Waves.Scripts.Camera
         }
 
         public static void LerpProjection(UnityEngine.Camera camera,
-                                          Projection from,
-                                          Projection to,
+                                          ProjectionType from,
+                                          ProjectionType to,
                                           float lerpTime,
                                           in CameraSettings settings)
         {
@@ -46,13 +46,13 @@ namespace JamUp.Waves.Scripts.Camera
         }
 
         [BurstCompile]
-        public static float4x4 Construct(Projection projection, in CameraSettings settings)
+        public static float4x4 Construct(ProjectionType projectionType, in CameraSettings settings)
         {
             new InitMatrixJob
             {
                 Width = Screen.width,
                 Height = Screen.height,
-                Projection = projection,
+                ProjectionType = projectionType,
                 Settings = settings,
                 Result = Matrices
             }.Run();

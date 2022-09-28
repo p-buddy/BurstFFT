@@ -1,31 +1,66 @@
+using System.Linq;
+using Unity.Collections;
+
 namespace JamUp.Waves.Scripts.API
 {
     public readonly struct KeyFrame
     {
-        public Projection Projection { get; }
-        public int SampleRate { get; }
-        public float Time { get; }
-        public float Thickness { get; }
         public float Duration { get; }
-        public WaveState[] Waves { get; }
+        public AnimatableProperty<ProjectionType> ProjectionType { get; }
+        public AnimatableProperty<int> SampleRate { get; }
+        public AnimatableProperty<float> SignalLength { get; }
+        public AnimatableProperty<float> Thickness { get; }
+        public AnimatableProperty<WaveState>[] Waves { get; }
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="duration"></param>
+        /// <param name="duration">
+        /// En: Hello
+        /// </param>
         /// <param name="sampleRate"></param>
-        /// <param name="projection"></param>
+        /// <param name="projectionType"></param>
         /// <param name="thickness"></param>
         /// <param name="waves"></param>
-        /// <param name="time"></param>
-        public KeyFrame(float duration, int sampleRate, Projection projection, float thickness, WaveState[] waves, float time)
+        /// <param name="signalLength"></param>
+        public KeyFrame(float duration,
+                        int sampleRate,
+                        ProjectionType projectionType,
+                        float thickness,
+                        WaveState[] waves,
+                        float signalLength)
         {
-            SampleRate = sampleRate;
-            Projection = projection;
-            Time = time;
-            Thickness = thickness;
+            SampleRate = new(sampleRate);
+            ProjectionType = new (projectionType);
+            SignalLength = new(signalLength);
+            Thickness = new(thickness);
             Duration = duration;
-            Waves = waves;
+            Waves = waves.Select(wave => new AnimatableProperty<WaveState>(wave)).ToArray();
+        }
+
+        public struct JobFriendlyRepresentation
+        {
+            public NativeArray<AnimatableProperty<ProjectionType>> Projections;
+            public NativeArray<AnimatableProperty<int>> SampleRates;
+            public NativeArray<AnimatableProperty<float>> SignalLengths;
+            public NativeArray<AnimatableProperty<float>> Thicknesses;
+            public NativeArray<float> Durations;
+            public NativeArray<int> WaveCounts;
+        }        
+        
+        public void CaptureForJob(JobFriendlyRepresentation representation, int index)
+        {
+            representation.Projections[index] = ProjectionType;
+            representation.SampleRates[index] = SampleRate;
+            representation.SignalLengths[index] = SignalLength;
+            representation.Thicknesses[index] = Thickness;
+            representation.Durations[index] = Duration;
+            representation.WaveCounts[index] = Waves.Length;
+        }
+
+        public void CaptureWaves(NativeArray<AnimatableProperty<WaveState>> waves, int index)
+        {
+            NativeArray<AnimatableProperty<WaveState>>.Copy(waves, 0, Waves, index, Waves.Length);
         }
     }
 }
