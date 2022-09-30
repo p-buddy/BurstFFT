@@ -1,7 +1,9 @@
+using Unity.Burst;
 using Unity.Mathematics;
 
 namespace JamUp.Waves.Scripts.API
 {
+    [BurstCompile]
     public readonly struct WaveState
     {
         public float Frequency { get; }
@@ -22,8 +24,19 @@ namespace JamUp.Waves.Scripts.API
             WaveType = waveType;
             DisplacementAxis = displacementAxis;
         }
+
+        public WaveState ZeroedAmplitude => new(Frequency, 0f, PhaseDegrees, WaveType, DisplacementAxis);
+
+        public float4 PackSettings => new (Frequency, Amplitude, math.radians(PhaseDegrees), (float)WaveType);
         
         public static implicit operator Wave(WaveState state) =>
             new (state.WaveType, state.Frequency, math.radians(state.PhaseDegrees), state.Amplitude);
+
+        public static float4x4 Pack(in WaveState first, in WaveState second, float m31 = default, float m33 = default) =>
+            new(first.PackSettings,
+                new float4(first.DisplacementAxis, m31),
+                second.PackSettings,
+                new float4(second.DisplacementAxis, m33));
+
     }
 }

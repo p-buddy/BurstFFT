@@ -6,6 +6,26 @@ namespace JamUp.UnityUtility
 {
     public static class ShaderPropertyUtility
     {
+        public static void Set(this MaterialPropertyBlock block, ShaderProperty<Matrix4x4> property)
+        {
+            block.SetMatrix(property.ID, property.Value);
+        }
+        
+        public static void Set(this MaterialPropertyBlock block, ShaderProperty<float> property)
+        {
+            block.SetFloat(property.ID, property.Value);
+        }
+        
+        public static void Set(this MaterialPropertyBlock block, ShaderProperty<int> property)
+        {
+            block.SetInteger(property.ID, property.Value);
+        }
+        
+        public static void Set(this MaterialPropertyBlock block, ShaderProperty<Matrix4x4[]> property)
+        {
+            block.SetMatrixArray(property.ID, property.Value);
+        }
+        
         public static void SetProperty<TData>(this MaterialPropertyBlock block, ShaderProperty<TData> property, TData toSet)
         {
             switch (toSet)
