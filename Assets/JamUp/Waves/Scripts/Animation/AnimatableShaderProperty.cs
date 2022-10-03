@@ -11,9 +11,9 @@ namespace JamUp.Waves.Scripts
 
         public AnimatableShaderProperty(string name)
         {
-            Animation = new ($"{name}_Animation");
-            From = new ($"{name}_From");
-            To = new ($"{name}_To");
+            Animation = new ($"{name}Animation");
+            From = new ($"{name}From");
+            To = new ($"{name}To");
         }
         
         private AnimatableShaderProperty(ShaderProperty<T> from, ShaderProperty<T> to, ShaderProperty<AnimationCurve> animation)

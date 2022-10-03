@@ -3,7 +3,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 
-namespace JamUp.Waves.Scripts.Systems
+namespace JamUp.Waves.Scripts
 {
     public struct SetCurrentWaves: IJob
     {

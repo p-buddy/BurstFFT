@@ -6,8 +6,8 @@ namespace JamUp.Waves.Scripts.API
     public readonly struct KeyFrame
     {
         public float Duration { get; }
-        public AnimatableProperty<ProjectionType> ProjectionType { get; }
-        public AnimatableProperty<int> SampleRate { get; }
+        public AnimatableProperty<float> ProjectionType { get; }
+        public AnimatableProperty<float> SampleRate { get; }
         public AnimatableProperty<float> SignalLength { get; }
         public AnimatableProperty<float> Thickness { get; }
         public AnimatableProperty<WaveState>[] Waves { get; }
@@ -31,6 +31,21 @@ namespace JamUp.Waves.Scripts.API
                         float signalLength)
         {
             SampleRate = new(sampleRate);
+            ProjectionType = new ((int)projectionType);
+            SignalLength = new(signalLength);
+            Thickness = new(thickness);
+            Duration = duration;
+            Waves = waves.Select(wave => new AnimatableProperty<WaveState>(wave)).ToArray();
+        }
+        
+        internal KeyFrame(float duration,
+                          float sampleRate,
+                          float projectionType,
+                          float thickness,
+                          WaveState[] waves,
+                          float signalLength)
+        {
+            SampleRate = new(sampleRate);
             ProjectionType = new (projectionType);
             SignalLength = new(signalLength);
             Thickness = new(thickness);
@@ -40,8 +55,8 @@ namespace JamUp.Waves.Scripts.API
 
         public struct JobFriendlyRepresentation
         {
-            public NativeArray<AnimatableProperty<ProjectionType>> Projections;
-            public NativeArray<AnimatableProperty<int>> SampleRates;
+            public NativeArray<AnimatableProperty<float>> Projections;
+            public NativeArray<AnimatableProperty<float>> SampleRates;
             public NativeArray<AnimatableProperty<float>> SignalLengths;
             public NativeArray<AnimatableProperty<float>> Thicknesses;
             public NativeArray<float> Durations;

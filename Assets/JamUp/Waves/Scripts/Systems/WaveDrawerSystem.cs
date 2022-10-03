@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using JamUp.UnityUtility;
 using JamUp.Waves.Scripts.API;
 using Unity.Collections;
@@ -6,14 +8,25 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Object = UnityEngine.Object;
 
-namespace JamUp.Waves.Scripts.Systems
+namespace JamUp.Waves.Scripts
 {
-    public partial class DrawWavesSystem: SystemBase
+    public partial class WaveDrawerSystem: SystemBase
     {
         private const int MaxWaveCount = 10;
+        private const float Attack = 0.01f;
+        private const float Release = 0.01f;
+
+        private int settingIndex;
         
         private Material material;
+        
+        private ConstantShaderPropertyWrapper<int> WaveCount_StartTime_EndTime;
+        private ConstantShaderPropertyWrapper<float> StartTime;
+        private ConstantShaderPropertyWrapper<float> EndTime;
+
+        private Dictionary<ShaderVariable, IShaderPropertyWrapper> nonWaveShaderProperties;
 
         private struct ShaderPropertiesBlittable
         {
@@ -38,11 +51,6 @@ namespace JamUp.Waves.Scripts.Systems
 
         private NativeArray<ShaderPropertiesBlittable> currentBlittableSettings;
         
-        // Wave shader representation: float4x4
-        // row 1: ...start wave (4 floats / ints)
-        // row 2: ...start propagation axis (3 floats) + animation curve (1 int)
-        // row 3: ...end wave (4 floats / ints)
-        // row 4: ...end propagation axis (3 floats) & one FREE slot
         private NativeArray<float4x4> nativeCurrentWaves;
         private ShaderProperty<Matrix4x4[]> currentWavesSetting;
 
@@ -110,56 +118,99 @@ namespace JamUp.Waves.Scripts.Systems
             Graphics.DrawProcedural(material, bounds, MeshTopology.Triangles, numberOfVertices[0], 0, null, propertyBlock, ShadowCastingMode.TwoSided);
         }
         
-        public void CreateWaveAnimation(in Signal signal, float time)
-        {
-            int frameCount = signal.Frames.Count;
+        
 
+        public KeyFrame GetCurrent(bool dispose = true)
+        {
+            float time = UnityEngine.Time.timeSinceLevelLoad;
+            var props = nonWaveShaderProperties;
+            float startTime = props[ShaderVariable.StartTime].Constant<float>();
+            float duration = props[ShaderVariable.EndTime].Constant<float>() - startTime;
+            float lerpTime = (time - startTime) / duration;
+
+            return new KeyFrame(Attack,
+                                props[ShaderVariable.SampleRate].Animated<float>(lerpTime, Mathf.Lerp).Value,
+                                props[ShaderVariable.Projection].Animated<float>(lerpTime, Mathf.Lerp).Value,
+                                props[ShaderVariable.Thickness].Animated<float>(lerpTime, Mathf.Lerp).Value,
+                                null,
+                                props[ShaderVariable.SignalLength].Animated<float>(lerpTime, Mathf.Lerp).Value
+                                );
+        }
+        
+        public void CreateWaveAnimation(in Signal signal)
+        {
+            float now = UnityEngine.Time.timeSinceLevelLoad;
+            int frameCount = signal.Frames.Count;
+            int paddedFrameCount = 1 + frameCount + 1;
+            
             KeyFrame.JobFriendlyRepresentation capture = new KeyFrame.JobFriendlyRepresentation
             {
-                Projections = new NativeArray<AnimatableProperty<ProjectionType>>(frameCount, Allocator.TempJob),
-                SampleRates = new NativeArray<AnimatableProperty<int>>(frameCount, Allocator.TempJob),
-                SignalLengths = new NativeArray<AnimatableProperty<float>>(frameCount, Allocator.TempJob),
-                Thicknesses = new NativeArray<AnimatableProperty<float>>(frameCount, Allocator.TempJob),
-                Durations = new NativeArray<float>(frameCount, Allocator.TempJob),
-                WaveCounts = new NativeArray<int>(frameCount, Allocator.TempJob)
+                Projections = new NativeArray<AnimatableProperty<float>>(paddedFrameCount, Allocator.Persistent),
+                SampleRates = new NativeArray<AnimatableProperty<float>>(paddedFrameCount, Allocator.Persistent),
+                SignalLengths = new NativeArray<AnimatableProperty<float>>(paddedFrameCount, Allocator.Persistent),
+                Thicknesses = new NativeArray<AnimatableProperty<float>>(paddedFrameCount, Allocator.Persistent),
+                Durations = new NativeArray<float>(paddedFrameCount, Allocator.TempJob),
+                WaveCounts = new NativeArray<int>(paddedFrameCount, Allocator.Persistent)
             };
-            
+
+            GetCurrent().CaptureForJob(capture, 0);
             for (int index = 0; index < frameCount; index++)
             {
-                signal.Frames[index].CaptureForJob(capture, index);
+                signal.Frames[index].CaptureForJob(capture, index + 1);
             }
-
-            NativeArray<int> runningTotalWaveCounts = new (frameCount, Allocator.TempJob);
-            new CalculateRunningTotalJob.Int
+            signal.Frames[frameCount].CaptureForJob(capture, frameCount);
+            
+            NativeArray<int> runningTotalWaveCounts = new (frameCount, Allocator.Persistent);
+            
+            // Need to account from current wavestate setting, and the 'release' wave
+            JobHandle waveCountTotalsJob = new CalculateRunningTotalJob.Int
             {
                 Input = capture.WaveCounts,
                 RunningTotal = runningTotalWaveCounts
-            }.Run();
-            
-            NativeArray<float> runningTotalDurations = new (frameCount, Allocator.TempJob);
-            new CalculateRunningTotalJob.Float
-            {
-                Input = capture.Durations,
-                RunningTotal = runningTotalDurations
-            }.Run();
+            }.Schedule();
 
+            NativeArray<float> times = new (paddedFrameCount + 1, Allocator.Persistent);
+            times[0] = now;
+            times[1] = now + Attack;
+            JobHandle collectTimesJob = new CollectTimesBasedOnDurations
+            {
+                LastDuration = Release,
+                Durations = capture.Durations,
+                Times = times
+            }.Schedule();
+            capture.Durations.Dispose(collectTimesJob);
+
+            nonWaveShaderProperties = new Dictionary<ShaderVariable, IShaderPropertyWrapper>(new[]
+            {
+                MakeConstantVariablePair(ShaderVariable.WaveCount, capture.WaveCounts),
+                MakeConstantVariablePair(ShaderVariable.StartTime, times),
+                MakeConstantVariablePair(ShaderVariable.EndTime, times, 1),
+                MakeAnimatedVariablePair(ShaderVariable.Projection, capture.Projections),
+                MakeAnimatedVariablePair(ShaderVariable.SignalLength, capture.SignalLengths),
+                MakeAnimatedVariablePair(ShaderVariable.Thickness, capture.Thicknesses),
+            });
+
+            waveCountTotalsJob.Complete();
             int totalWaves = runningTotalWaveCounts[frameCount - 1];
-            NativeArray<AnimatableProperty<WaveState>> waves = new (totalWaves, Allocator.TempJob);
+            NativeArray<AnimatableProperty<WaveState>> waves = new (totalWaves, Allocator.Persistent);
             
             for (int index = 1; index < signal.Frames.Count; index++)
             {
                 signal.Frames[index].CaptureWaves(waves, runningTotalWaveCounts[index - 1]);
             }
             
-            // Now create job in where an transition entity is created from all the capture data
-
-            var ecb = endSimulationEcbSystem.CreateCommandBuffer();
-            var job = Job;
-            job.WithCode(() =>
-            {
-                Entity entity = ecb.CreateEntity(archetype);
-                ecb.SetComponent(entity, new TransitionState());
-            }).Run();
+            collectTimesJob.Complete();
         }
+
+        private KeyValuePair<ShaderVariable, IShaderPropertyWrapper> MakeConstantVariablePair<T>(
+            ShaderVariable variable,
+            NativeArray<T> allSettings,
+            int offset = 0) where T : struct =>
+            new(variable, new ConstantShaderPropertyWrapper<T>(allSettings, variable.Name(), offset));
+        
+        private KeyValuePair<ShaderVariable, IShaderPropertyWrapper> MakeAnimatedVariablePair<T>(
+            ShaderVariable variable,
+            NativeArray<AnimatableProperty<T>> allSettings) where T : struct =>
+            new(variable, new AnimatedShaderPropertyWrapper<T>(allSettings, variable.Name()));
     }
 }
