@@ -14,8 +14,7 @@ namespace JamUp.Waves.Scripts
     {
         [TextArea(50, int.MaxValue)]
         public string TestField;
-
-        private UnityEngine.Camera camera;
+        private Camera camera;
         private CameraSettings settings;
 
         private KeyFrame[] states;
@@ -76,7 +75,7 @@ namespace JamUp.Waves.Scripts
             bool isLast = OnLastIndex();
             KeyFrame current = states[currentIndex];
             KeyFrame next = isLast ? current : states[currentIndex + 1];
-        
+            
             if (!OnLastIndex() && DurationMet())
             {
                 current = states[++currentIndex];

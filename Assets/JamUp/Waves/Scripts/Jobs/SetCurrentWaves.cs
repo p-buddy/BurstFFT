@@ -42,7 +42,7 @@ namespace JamUp.Waves.Scripts
                     AnimatableProperty<WaveState> state = AllWaves[index];
                     WaveState wave = state.Value;
                     WaveState final = wave.ZeroedAmplitude;
-                    CurrentWaves[i] = WaveState.Pack(in wave, in final, (float)state.Animation);
+                    CurrentWaves[i] = WaveState.Pack(in wave, in final, (float)state.AnimationCurve);
                 }
 
                 CurrentWaveCount[0] = startingWaveCount;
@@ -64,7 +64,7 @@ namespace JamUp.Waves.Scripts
                     ? AllWaves[endIndex].Value.ZeroedAmplitude
                     : AllWaves[startIndex].Value;
 
-                AnimationCurve animation = startWaveInvalid ? AnimationCurve.Linear : AllWaves[startIndex].Animation;
+                AnimationCurve animation = startWaveInvalid ? AnimationCurve.Linear : AllWaves[startIndex].AnimationCurve;
 
                 WaveState endingWave = i > endingWaveCount
                     ? AllWaves[startIndex].Value.ZeroedAmplitude

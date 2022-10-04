@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using JamUp.UnityUtility;
 using JamUp.Waves.Scripts.API;
+using pbuddy.TypeScriptingUtility.RuntimeScripts;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
@@ -61,13 +63,16 @@ namespace JamUp.Waves.Scripts
         private float2 currentTimeFrame;
 
         private Bounds bounds;
-        private MaterialPropertyBlock propertyBlock;
+        
+        private Dictionary<int, MaterialPropertyBlock> propertyBlocks;
 
-
+        private AnimatableShaderProperty<float> projectionShaderProperty;
+        private AnimatableShaderProperty<float> thicknessShaderProperty;
+        private AnimatableShaderProperty<float> signalLengthShaderProperty;
+        private AnimatableShaderProperty<float> sampleRateShaderProperty;
         protected override void OnCreate()
         {
             base.OnCreate();
-            archetype = EntityManager.CreateArchetype(typeof(TransitionState));
             endSimulationEcbSystem = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
 
             Transform transform = new GameObject().transform;
@@ -99,26 +104,100 @@ namespace JamUp.Waves.Scripts
 
         protected override void OnUpdate()
         {
-            if (currentTimeFrame.y < (float)Time.ElapsedTime)
+            Entities.WithoutBurst().ForEach((in PropertyBlockReference propertyBlockRef, in VertexCount vertexCount) =>
             {
-                // perform job to update current settings and waves
-                
-                nativeCurrentWaves.Reinterpret<Matrix4x4>().CopyTo(currentWavesSetting.Value);
-                propertyBlock.Set(currentWavesSetting);
-                
-                currentBlittableSettings[0].Apply(propertyBlock);
-                
-                // Put into job
-                ShaderPropertiesBlittable current = currentBlittableSettings[0];
-                float maxSignalTime = Mathf.Max(current.SignalTime.From.Value, current.SignalTime.To.Value);
-                int maxSampleRate = System.Math.Max(current.SampleRate.From.Value, current.SampleRate.To.Value);
-                numberOfVertices[0] = 24 * (int)(maxSignalTime / (1f / maxSampleRate));
-            }
+                var propertyBlock = propertyBlocks[propertyBlockRef.ID];
+                int count = vertexCount.Value;
+                MeshTopology topology = MeshTopology.Triangles;
+                ShadowCastingMode shadow = ShadowCastingMode.TwoSided;
+                Graphics.DrawProcedural(material, bounds, topology, count, 0, null, propertyBlock, shadow);
+            }).Run();
+            
+            float time = UnityEngine.Time.timeSinceLevelLoad;
+            var ecb = endSimulationEcbSystem.CreateCommandBuffer().AsParallelWriter();
+            
+            JobHandle determineTransitions = Entities.WithNone<Step>()
+                    .ForEach((Entity entity,
+                              int index,
+                              ref CurrentTimeFrame current,
+                              ref DynamicBuffer<DurationElement> elements) =>
+                    {
+                        if (!current.UpdateRequired(time, Time.DeltaTime)) return;
+                        elements.RemoveAt(0);
+                        DurationElement duration = elements[0];
+                        current.StartTime = time;
+                        current.EndTime = time + duration;
+                        ecb.AddComponent<Step>(index, entity);
+                    }).ScheduleParallel(Dependency);
 
-            Graphics.DrawProcedural(material, bounds, MeshTopology.Triangles, numberOfVertices[0], 0, null, propertyBlock, ShadowCastingMode.TwoSided);
+            JobHandle dependency = determineTransitions;
+            JobHandle projection = SetCurrentAnimation<float, CurrentProjection, ProjectionElement>(dependency);
+            JobHandle thickness = SetCurrentAnimation<float, CurrentThickness, ThicknessElement>(dependency);
+            JobHandle signalLength = SetCurrentAnimation<float, CurrentSignalLength, SignalLengthElement>(dependency);
+            JobHandle sampleRate = SetCurrentAnimation<float, CurrentSampleRate, SampleRateElement>(dependency);
+            
+            JobHandle vertexDependency = JobHandle.CombineDependencies(signalLength, sampleRate);
+
+            Entities.WithAll<Step>()
+                    .ForEach((ref VertexCount count,
+                              in CurrentSignalLength currentSignalLength,
+                              in CurrentSampleRate currentSampleRate) =>
+                    {
+                        Animation<float> signal = currentSignalLength.Value;
+                        Animation<float> sample = currentSampleRate.Value;
+                        float maxSignalTime = math.max(signal.From, signal.To);
+                        float maxSampleRate = math.max(sample.From, sample.To);
+                        count.Value = 24 * (int)(maxSignalTime / (1f / maxSampleRate));
+                    }).ScheduleParallel(vertexDependency);
+            
+            // update waves
+            
+            // If this throws errors (maybe material property block has race conditions), we can process in series
+             
+            UpdateAnimatableShaderFloatProperty<CurrentProjection>(projection, in projectionShaderProperty);
+            UpdateAnimatableShaderFloatProperty<CurrentThickness>(thickness, in thicknessShaderProperty);
+            UpdateAnimatableShaderFloatProperty<CurrentSignalLength>(signalLength, in signalLengthShaderProperty);
+            UpdateAnimatableShaderFloatProperty<CurrentSampleRate>(sampleRate, in sampleRateShaderProperty);
+
+            Entities.WithAll<Step>()
+                    .ForEach((Entity entity, int index) => ecb.RemoveComponent<Step>(index, entity))
+                    .ScheduleParallel(Dependency);
         }
-        
-        
+
+        private JobHandle SetCurrentAnimation<TType, TCurrent, TBuffer>(JobHandle dependency) 
+            where TType : new()
+            where TCurrent : IValueSettable<Animation<TType>>
+            where TBuffer : struct, IAnimatable, IValuable<TType>
+        {
+            return Entities.WithAll<Step>()
+                           .WithoutBurst()
+                           .ForEach((ref TCurrent current, ref DynamicBuffer<TBuffer> elements) =>
+                           {
+                               elements.RemoveAt(0);
+                               TBuffer from = elements[0];
+                               TType to = elements.Length == 1 ? elements[1].Value : from.Value;
+                               current.Value = new Animation<TType>(from.Value, to, from.AnimationCurve);
+                           })
+                    .ScheduleParallel(dependency);
+        }
+
+        private JobHandle UpdateAnimatableShaderFloatProperty<TCurrent>(JobHandle dependency, 
+                                                                        in AnimatableShaderProperty<float> property)
+            where TCurrent : IValuable<Animation<float>>
+        {
+            AnimatableShaderProperty<float> shader = property;
+            return Entities.WithAll<Step>()
+                    .WithoutBurst()
+                    .ForEach((in PropertyBlockReference propertyBlockReference,
+                              in TCurrent current) =>
+                    {
+                        MaterialPropertyBlock block = (MaterialPropertyBlock)propertyBlockReference.Handle.Target;
+                        Animation<float> value = current.Value;
+                        block.SetFloat(shader.Animation.ID, (float)value.Curve);
+                        block.SetFloat(shader.From.ID, value.From);
+                        block.SetFloat(shader.To.ID, value.To);
+                    }).ScheduleParallel(dependency);
+        }
 
         public KeyFrame GetCurrent(bool dispose = true)
         {

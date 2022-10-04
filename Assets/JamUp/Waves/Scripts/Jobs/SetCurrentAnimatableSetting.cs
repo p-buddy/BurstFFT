@@ -22,7 +22,7 @@ namespace JamUp.Waves.Scripts
         {
             AnimatableProperty<T> from = AllSettings[Index];
             AnimatableProperty<T> to = !IsLast ? AllSettings[Index + 1] : from;
-            Output[0] = Output[0].WithValues(from.Value, to.Value, from.Animation);
+            Output[0] = Output[0].WithValues(from.Value, to.Value, from.AnimationCurve);
         }
     }
 }
