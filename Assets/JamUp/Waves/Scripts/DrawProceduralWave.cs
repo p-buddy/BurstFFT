@@ -12,6 +12,7 @@ namespace JamUp.Waves.Scripts
 {
     public class DrawProceduralWave : MonoBehaviour
     {
+        #if false
         [TextArea(50, int.MaxValue)]
         public string TestField;
         private Camera camera;
@@ -143,5 +144,6 @@ namespace JamUp.Waves.Scripts
             propertyBlock.SetProperty(WaveOriginToWorldMatrix, transform.localToWorldMatrix);
             propertyBlock.SetProperty(WorldToWaveOriginMatrix, transform.worldToLocalMatrix);
         }
+        #endif
     }
 }

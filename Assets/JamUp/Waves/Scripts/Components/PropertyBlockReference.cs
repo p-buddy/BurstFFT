@@ -3,7 +3,7 @@ using Unity.Entities;
 
 namespace JamUp.Waves.Scripts
 {
-    public readonly struct PropertyBlockReference: IComponentData
+    public readonly struct PropertyBlockReference: IComponentData, IRequiredInArchetype
     {
         public int ID { get; }
         public GCHandle Handle { get;}
@@ -13,6 +13,5 @@ namespace JamUp.Waves.Scripts
             ID = id;
             Handle = handle;
         }
-        
     }
 }

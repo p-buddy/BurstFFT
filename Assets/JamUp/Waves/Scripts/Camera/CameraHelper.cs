@@ -15,7 +15,7 @@ namespace JamUp.Waves.Scripts
         {
             Matrices = new NativeArray<float4x4>(1, Allocator.Persistent);
         }
-
+        
         public static void Dispose()
         {
             Matrices.Dispose();
