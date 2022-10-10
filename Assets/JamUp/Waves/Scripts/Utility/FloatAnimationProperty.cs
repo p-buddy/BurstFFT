@@ -14,12 +14,12 @@ namespace JamUp.Waves.Scripts
 
             public FloatAnimationProperty(string propertyName)
             {
-                UpdateCurrentQuery = new EntityQueryBuilder().WithAllReadOnly<Step, TComponent>()
+                UpdateCurrentQuery = new EntityQueryBuilder().WithAllReadOnly<UpdateRequired, TComponent>()
                                                              .WithAll<TBuffer>()
                                                              .ToEntityQuery();
                 
                 SetShaderPropertyQuery = new EntityQueryBuilder()
-                                         .WithAllReadOnly<Step, PropertyBlockReference, TComponent>()
+                                         .WithAllReadOnly<UpdateRequired, PropertyBlockReference, TComponent>()
                                          .ToEntityQuery();
 
                 ShaderProperty = new AnimatableShaderProperty<float>(propertyName);

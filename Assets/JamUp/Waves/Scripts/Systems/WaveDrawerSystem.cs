@@ -12,12 +12,13 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
+using KeyFrame = JamUp.Waves.Scripts.API.KeyFrame;
 
 namespace JamUp.Waves.Scripts
 {
     public partial class WaveDrawerSystem : SystemBase
     {
-        private const int MaxWaveCount = 10;
+        public const int MaxWaveCount = 10;
         private const float Attack = 0.01f;
         private const float Release = 0.01f;
 
@@ -27,17 +28,21 @@ namespace JamUp.Waves.Scripts
 
         private EntityArchetype archetype;
         private EndSimulationEntityCommandBufferSystem endSimulationEcbSystem;
+        private EntityQuery queryForArchetype;
+        
         private float2 currentTimeFrame;
 
         private Bounds bounds;
 
-        private Dictionary<int, MaterialPropertyBlock> propertyBlocks;
-
+        private List<MaterialPropertyBlock> propertyBlocks;
+        private List<GCHandle> handles;
+        
         private AnimatableShaderProperty<float> projectionShaderProperty;
         private AnimatableShaderProperty<float> thicknessShaderProperty;
         private AnimatableShaderProperty<float> signalLengthShaderProperty;
         private AnimatableShaderProperty<float> sampleRateShaderProperty;
 
+        private NativeArray<Entity>? archetypeEntities = null;
 
         protected override void OnCreate()
         {
@@ -49,6 +54,7 @@ namespace JamUp.Waves.Scripts
                                                          .ToArray();
             
             archetype = EntityManager.CreateArchetype(typesForArchetype);
+            queryForArchetype = GetEntityQuery(ComponentType.ReadOnly<IRequiredInArchetype>());
             
             endSimulationEcbSystem = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
 
@@ -82,11 +88,9 @@ namespace JamUp.Waves.Scripts
              FloatAnimationProperties.Kind.SignalLength);
 
             JobHandle vertexHandle = UpdateVertexCount(vertexDependency);
-
-            // update waves
             
             JobHandle setHandle = FloatAnimationProperties.SetAll(this);
-            Dependency = Cleanup(JobHandle.CombineDependencies(vertexHandle, setHandle), ecb);
+            Dependency = Cleanup(JobHandle.CombineDependencies(vertexHandle, setHandle, waveUpdates), ecb);
         }
 
         private void Draw()
@@ -108,7 +112,7 @@ namespace JamUp.Waves.Scripts
             float time = UnityEngine.Time.timeSinceLevelLoad;
             float delta = Time.DeltaTime;
             
-            return Entities.WithNone<Step>()
+            return Entities.WithNone<UpdateRequired>()
                            .ForEach((Entity entity,
                                      int entityInQueryIndex,
                                      ref CurrentTimeFrame current,
@@ -121,16 +125,17 @@ namespace JamUp.Waves.Scripts
                                    return;
                                }
                                
-                               elements.RemoveAt(0);
                                DurationElement duration = elements[0];
+                               current.StartTime = time;
                                current.EndTime = time + duration;
-                               ecb.AddComponent<Step>(entityInQueryIndex, entity);
+                               elements.RemoveAt(0);
+                               ecb.AddComponent<UpdateRequired>(entityInQueryIndex, entity);
                            }).ScheduleParallel(dependency);
         }
 
         private JobHandle UpdateWaves(JobHandle dependency)
         {
-            return Entities.WithAll<Step>()
+            return Entities.WithAll<UpdateRequired>()
                            .ForEach((ref CurrentWaveCount currentWaveCount,
                                      ref DynamicBuffer<WaveCountElement> waveCounts,
                                      ref DynamicBuffer<AllWavesElement> allWaves,
@@ -175,7 +180,7 @@ namespace JamUp.Waves.Scripts
 
         private JobHandle UpdateVertexCount(JobHandle dependency)
         {
-            return Entities.WithAll<Step>()
+            return Entities.WithAll<UpdateRequired>()
                     .ForEach((ref VertexCount count,
                               in CurrentSignalLength currentSignalLength,
                               in CurrentSampleRate currentSampleRate) =>
@@ -191,24 +196,10 @@ namespace JamUp.Waves.Scripts
 
         private JobHandle Cleanup(JobHandle dependency, EntityCommandBuffer.ParallelWriter ecb)
         {
-            return Entities.WithAll<Step>()
+            return Entities.WithAll<UpdateRequired>()
                     .ForEach((Entity entity, int entityInQueryIndex) =>
-                                 ecb.RemoveComponent<Step>(entityInQueryIndex, entity))
+                                 ecb.RemoveComponent<UpdateRequired>(entityInQueryIndex, entity))
                     .ScheduleParallel(dependency);
-        }
-       
-
-        public KeyFrame GetCurrent(bool dispose = true)
-        {
-            float time = UnityEngine.Time.timeSinceLevelLoad;
-
-            return new KeyFrame(Attack,
-                                100,
-                                ProjectionType.Perspective,
-                                0.1f,
-                                null,
-                                1f
-                               );
         }
 
         private readonly struct EntityInitializationHelper
@@ -230,6 +221,15 @@ namespace JamUp.Waves.Scripts
             }
 
             public JobHandle SetCapacity<TBuffer>(int capacity) where TBuffer : struct, IBufferElementData =>
+                new SetBufferCapacity<TBuffer>
+                {
+                    SortKey = SortKey,
+                    Entity = Entity,
+                    ECB = ECB,
+                    Capacity = capacity
+                }.Schedule(Dependency);
+            
+            public JobHandle Reset<TBuffer>(int capacity) where TBuffer : struct, IBufferElementData =>
                 new SetBufferCapacity<TBuffer>
                 {
                     SortKey = SortKey,
@@ -264,36 +264,154 @@ namespace JamUp.Waves.Scripts
                 }.Schedule(Dependency);
             }
         }
-        
-        public void CreateWaveEntity(in Signal signal)
+
+        // Should be called once before signals are added
+        public void RefreshEntityQuery()
         {
-            int frameCount = signal.Frames.Count;
-            var ecb = endSimulationEcbSystem.CreateCommandBuffer().AsParallelWriter();
+            archetypeEntities?.Dispose();
+            archetypeEntities = queryForArchetype.ToEntityArray(Allocator.TempJob);
+        }
+
+        private readonly struct EntityForSignal
+        {
+            public int NextSortKey { get; }
             
-            NativeArray<Entity> entity = new NativeArray<Entity>(1, Allocator.TempJob);
-            EntityArchetype localArchetype = archetype;
-            JobHandle dependency = Job.WithBurst().WithCode(() =>
+            public NativeArray<Entity> Entity { get; }
+            
+            public JobHandle Dependency { get; }
+            
+            public bool FreshlyCreated { get; }
+
+            public EntityForSignal(NativeArray<Entity> entity, int currentSortKey, JobHandle dependency, bool freshlyCreated)
             {
-                Entity ent = ecb.CreateEntity(0, localArchetype);
-                entity[0] = ent;
-            }).Schedule(Dependency);
+                Entity = entity;
+                NextSortKey = currentSortKey + 1;
+                Dependency = dependency;
+                FreshlyCreated = freshlyCreated;
+            }
+        }
 
-            EntityInitializationHelper capacityHelper = new (entity, 1, ecb, dependency);
+        private EntityForSignal GetEntity(EntityCommandBuffer.ParallelWriter ecb,
+                                                                int index,
+                                                                int frameCount,
+                                                                in KeyFrame frame)
+        {
+            bool useExisting = archetypeEntities.HasValue && archetypeEntities.Value.Length > index;
+            NativeArray<Entity> entity = new NativeArray<Entity>(1, Allocator.TempJob);
+            NativeArray<int> waveCount = new NativeArray<int>(1, Allocator.TempJob);
 
-            int elementsToAdd = frameCount + 2;
+            JobHandle dependency;
+            if (useExisting)
+            {
+                entity[0] = archetypeEntities.Value[index];
+                waveCount[0] = frame.Waves.Length;
+
+                dependency =  Job.WithBurst()
+                                 .WithReadOnly(entity)
+                                 .WithCode(() =>
+                                 {
+                                     Entity ent = entity[0];
+                                     ecb.RemoveComponent<UpdateRequired>(0, ent);
+                                 })
+                                 .Schedule(Dependency);
+            }
+            else
+            {
+                EntityArchetype localArchetype = archetype;
+                int maxCurrentWaveCount = MaxWaveCount;
+                
+                MaterialPropertyBlock block = new MaterialPropertyBlock();
+                GCHandle gcHandle = GCHandle.Alloc(block);
+                int propertyBlockID = propertyBlocks.Count;
+                propertyBlocks.Add(block);
+                handles.Add(gcHandle);
+                
+                dependency = Job.WithBurst().WithCode(() =>
+                {
+                    Entity ent = ecb.CreateEntity(0, localArchetype);
+                    ecb.SetComponent(1, ent, new PropertyBlockReference(propertyBlockID, gcHandle));
+                    ecb.SetBuffer<CurrentWavesElement>(1, ent).EnsureCapacity(maxCurrentWaveCount);
+                    entity[0] = ent;
+                }).Schedule(Dependency);
+
+                ComponentDataFromEntity<CurrentWaveCount> getWaveCount = GetComponentDataFromEntity<CurrentWaveCount>();
+                dependency = Job.WithBurst()
+                                .WithReadOnly(entity)
+                                .WithReadOnly(getWaveCount)
+                                .WithCode(() =>
+                                {
+                                    waveCount[0] = getWaveCount[entity[0]].Value;
+                                }).Schedule(dependency);
+            }
+
+            int elementsToAdd = 1 + frameCount + 2;
             int capacity = elementsToAdd;
             int wavesEstimate = 2;
-            capacityHelper.SetCapacity<DurationElement>(capacity);
-            capacityHelper.SetCapacity<WaveCountElement>(capacity);
-            capacityHelper.SetCapacity<ProjectionElement>(capacity);
-            capacityHelper.SetCapacity<SignalLengthElement>(capacity);
-            capacityHelper.SetCapacity<SampleRateElement>(capacity);
-            capacityHelper.SetCapacity<ThicknessElement>(capacity);
-            capacityHelper.SetCapacity<AllWavesElement>(capacity * wavesEstimate);
-            capacityHelper.SetCapacity<CurrentWavesElement>(MaxWaveCount);
+            JobHandle ensureBuffers = Job.WithBurst()
+                                         .WithReadOnly(entity)
+                                         .WithCode(() =>
+                                         {
+                                             int sortKey = 1;
+                                             Entity ent = entity[0];
+                                             ecb.SetBuffer<DurationElement>(sortKey, ent).EnsureCapacity(capacity);
+                                             ecb.SetBuffer<ProjectionElement>(sortKey, ent).EnsureCapacity(capacity);
+                                             ecb.SetBuffer<SignalLengthElement>(sortKey, ent).EnsureCapacity(capacity);
+                                             ecb.SetBuffer<SampleRateElement>(sortKey, ent).EnsureCapacity(capacity);
+                                             ecb.SetBuffer<ThicknessElement>(sortKey, ent).EnsureCapacity(capacity);
 
+                                             sortKey += 1;
+                                             ecb.AppendToBuffer<DurationElement>(sortKey, ent, default);
+                                             ecb.AppendToBuffer<ProjectionElement>(sortKey, ent, default);
+                                             ecb.AppendToBuffer<SignalLengthElement>(sortKey, ent, default);
+                                             ecb.AppendToBuffer<SampleRateElement>(sortKey, ent, default);
+                                             ecb.SetBuffer<ThicknessElement>(sortKey, ent).EnsureCapacity(capacity);
+                                         })
+                                         .Schedule(dependency);
+
+            JobHandle waveBuffers = Job.WithBurst()
+                                              .WithReadOnly(entity)
+                                              .WithReadOnly(waveCount)
+                                              .WithDisposeOnCompletion(waveCount)
+                                              .WithCode(() =>
+                                              {
+                                                  int sortKey = 1;
+                                                  Entity ent = entity[0];
+                                                  int count = waveCount[0];
+                                                  int estimate = (capacity - 1) * wavesEstimate + count;
+                                                  
+                                                  ecb.SetBuffer<WaveCountElement>(sortKey, ent).EnsureCapacity(capacity);
+                                                  ecb.SetBuffer<AllWavesElement>(sortKey, ent).EnsureCapacity(estimate);
+                                                  
+                                                  sortKey += 1;
+                                                  ecb.AppendToBuffer(sortKey, ent, new WaveCountElement
+                                                  {
+                                                      Value = waveCount[0],
+                                                  });
+
+                                                  for (int i = 0; i < count; i++)
+                                                  {
+                                                      ecb.AppendToBuffer<AllWavesElement>(sortKey, ent, default);
+                                                  }
+                                              })
+                                              .Schedule(dependency);
+
+            return new(entity, 2, JobHandle.CombineDependencies(ensureBuffers, waveBuffers), !useExisting);
+        }
+
+        public void CreateWaveEntity(in Signal signal, int signalIndex)
+        {
+            // Consider queue up signals and then adding them all at the beginning of the update loop
+            
+            int frameCount = signal.Frames.Count;
+            EntityCommandBuffer.ParallelWriter ecb = endSimulationEcbSystem.CreateCommandBuffer().AsParallelWriter();
+
+            EntityForSignal entityForSignal = GetEntity(ecb, signalIndex, frameCount, signal.Frames[0]);
+            JobHandle dependency = entityForSignal.Dependency;
+            NativeArray<Entity> entity = entityForSignal.Entity;
+
+            int elementsToAdd = frameCount + 2;
             int handlePerFrameOffset = 7;
-            int sortKeyOffset = 2;
+            int sortKeyOffset = entityForSignal.NextSortKey;
             int accumulatedWaveCount = 0;
             NativeArray<JobHandle> appendHandles = new (elementsToAdd * handlePerFrameOffset, Allocator.TempJob);
             for (int index = 0; index < elementsToAdd; index++)
@@ -307,26 +425,30 @@ namespace JamUp.Waves.Scripts
                 
                 int sortKey = index + sortKeyOffset;
                 EntityInitializationHelper helper = new (entity, index + sortKeyOffset, ecb, dependency);
-                int baseIndex = index * handlePerFrameOffset;
+                int baseHandleIndex = index * handlePerFrameOffset;
                 
-                appendHandles[baseIndex] = helper.Append<float, DurationElement>(frame.Duration);
-                appendHandles[baseIndex + 1] = helper.Append<int, WaveCountElement>(frame.Waves.Length);
-                appendHandles[baseIndex + 2] = helper.AppendAnimatable<ProjectionElement>(frame.ProjectionFloat);
-                appendHandles[baseIndex + 3] = helper.AppendAnimatable<SignalLengthElement>(frame.SignalLength);
-                appendHandles[baseIndex + 4] = helper.AppendAnimatable<SampleRateElement>(frame.SignalLength);
-                appendHandles[baseIndex + 5] = helper.AppendAnimatable<ThicknessElement>(frame.SignalLength);
-                appendHandles[baseIndex + 6] = new AppendWaveElement
+                appendHandles[baseHandleIndex] = helper.Append<float, DurationElement>(frame.Duration);
+                appendHandles[baseHandleIndex + 1] = helper.Append<int, WaveCountElement>(frame.Waves.Length);
+                appendHandles[baseHandleIndex + 2] = helper.AppendAnimatable<ProjectionElement>(frame.ProjectionFloat);
+                appendHandles[baseHandleIndex + 3] = helper.AppendAnimatable<SignalLengthElement>(frame.SignalLength);
+                appendHandles[baseHandleIndex + 4] = helper.AppendAnimatable<SampleRateElement>(frame.SignalLength);
+                appendHandles[baseHandleIndex + 5] = helper.AppendAnimatable<ThicknessElement>(frame.SignalLength);
+                appendHandles[baseHandleIndex + 6] = new AppendWaveElement
                 {
                     ECB = ecb,
-                    WaveStates = new NativeArray<Animatable<WaveState>>(frame.Waves, Allocator.TempJob),
+                    WaveStates = new NativeArray<Animatable<WaveState>>(frame.Waves, Allocator.Temp),
                     SortKey = sortKey + accumulatedWaveCount,
                     Entity = entity
                 }.Schedule(dependency);
                 
                 accumulatedWaveCount += frame.Waves.Length;
             }
-
-            // Set currents
+            
+            // Now just need to set currents based on whether or not the entity is freshly created
+            
+            // If not freshly created, than some lerping jobs must be done to see what the starting value should be
+            // (whatever the current value is).
+            
         }
     }
 }
