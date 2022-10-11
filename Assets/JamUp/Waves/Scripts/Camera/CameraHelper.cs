@@ -13,7 +13,7 @@ namespace JamUp.Waves.Scripts
         
         static CameraHelper()
         {
-            Matrices = new NativeArray<float4x4>(1, Allocator.Persistent);
+            //Matrices = new NativeArray<float4x4>(1, Allocator.Persistent);
         }
         
         public static void Dispose()

@@ -1,7 +1,10 @@
 using System;
 using System.IO;
+using JamUp.Waves.Scripts;
 using JamUp.Waves.Scripts.API;
 using NUnit.Framework;
+using Unity.Collections;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace JamUp.Waves.EditModeTests
@@ -39,6 +42,22 @@ export const addAt = (frame: {nameof(KeyFrame)}, time: number): void => {{
             string path = Path.Combine(Folder, ApiFile);
             if (File.Exists(path)) File.Delete(path);
             File.WriteAllText(Path.Combine(Folder, ApiFile), content);
+        }
+
+        [Test]
+        public void T()
+        {
+            NativeArray<CurrentWavesElement> x = new NativeArray<CurrentWavesElement>(1, Allocator.Temp);
+            x[0] = new CurrentWavesElement()
+            {
+                Value = new float4x4(new float4(0, 4, 8, 12),
+                                     new float4(1, 5, 9, 13),
+                                     new float4(2, 6, 10, 14),
+                                     new float4(3, 7, 11, 15))
+            };
+            NativeArray<Matrix4x4> y = x.Reinterpret<Matrix4x4>();
+            Debug.Log(y[0]);
+            x.Dispose();
         }
     }
 }

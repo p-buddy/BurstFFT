@@ -33,10 +33,10 @@ namespace JamUp.Waves.Scripts.API
             new (state.WaveType, state.Frequency, math.radians(state.PhaseDegrees), state.Amplitude);
 
         public static float4x4 Pack(in WaveState first, in WaveState second, float m31 = default, float m33 = default) =>
-            new(first.PackSettings,
-                new float4(first.DisplacementAxis, m31),
-                second.PackSettings,
-                new float4(second.DisplacementAxis, m33));
+            math.transpose(new float4x4(first.PackSettings,
+                                        new float4(first.DisplacementAxis, m31),
+                                        second.PackSettings,
+                                        new float4(second.DisplacementAxis, m33)));
 
     }
 }

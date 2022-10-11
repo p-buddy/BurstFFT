@@ -7,7 +7,7 @@ namespace JamUp.Waves.Scripts
 {
     public struct AppendWaveElement: IJob
     {
-        public EntityCommandBuffer.ParallelWriter ECB;
+        public EntityCommandBuffer ECB;
         
         [ReadOnly]
         public NativeArray<Entity> Entity;
@@ -16,15 +16,13 @@ namespace JamUp.Waves.Scripts
         [DeallocateOnJobCompletion]
         public NativeArray<Animatable<WaveState>> WaveStates;
         
-        public int SortKey;
-        
         public void Execute()
         {
             Entity ent = Entity[0];
             for (int i = 0; i < WaveStates.Length; i++)
             {
                 Animatable<WaveState> waveState = WaveStates[i];
-                ECB.AppendToBuffer(SortKey + i, ent, new AllWavesElement { Value = waveState });
+                ECB.AppendToBuffer(ent, new AllWavesElement { Value = waveState });
             }
         }
     }

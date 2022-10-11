@@ -10,16 +10,15 @@ namespace JamUp.Waves.Scripts
         where TProperty : struct, IValuable<TData>, IAnimatable
         where TBufferElement : struct, IBufferElementData, IAnimatableSettable, IValueSettable<TData>
     {
-        public EntityCommandBuffer.ParallelWriter ecb;
+        public EntityCommandBuffer ecb;
         [ReadOnly]
         public NativeArray<Entity> entity;
-        public int SortKey;
         public TBufferElement Element;
         public TProperty Property;
         
         public void Execute()
         {
-            ecb.AppendToBuffer(SortKey, entity[0], new TBufferElement
+            ecb.AppendToBuffer(entity[0], new TBufferElement
             {
                 Value = Property.Value,
                 AnimationCurve = Property.AnimationCurve

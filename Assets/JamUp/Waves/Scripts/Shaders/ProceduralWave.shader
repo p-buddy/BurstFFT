@@ -48,17 +48,21 @@ Shader "JamUp/ProdeduralWave"
         float ThicknessFrom;
         float ThicknessTo;
 
-        // Deprecate soon
-        int SampleRate;
-        float Thickness;
-        int WaveCount;
-        
-        float4x4 WaveTransitionData[NumberOfSupportedWaves];
+        // Animatable Signal Length
+        int SignalLengthAnimation;
+        int SignalLengthFrom;
+        int SignalLengthTo;
 
-        // (keyStartTime, keyEndTime, keyEndTime - keyStartTime);
-        float4 KeyTime;
-        float4 WaveData[NumberOfSupportedWaves * 2];
-        float4 DisplacementAxes[NumberOfSupportedWaves * 2];
+        // Animatable Projection
+        float ProjectionAnimation;
+        float ProjectionFrom;
+        float ProjectionTo;
+        
+        float StartTime;
+        float EndTime;
+
+        int WaveCount;
+        float4x4 WaveTransitionData[NumberOfSupportedWaves];
 
         /* END SHADER SETTINGS */
 
@@ -82,24 +86,28 @@ Shader "JamUp/ProdeduralWave"
         //the vertex shader function
         void vert(inout VertData appdata)
         {
-            const float initialTime = KeyTime.x, timeDelta = KeyTime.z;
-            const float lerpTime = smoothstep(0, 1, (_Time.y - initialTime) / timeDelta);
+            const float timeDelta = EndTime - StartTime;
+            const float lerpTime = smoothstep(0, 1, (_Time.y - StartTime) / timeDelta);
 
-            const float time = GetTimeForVertexIndex(appdata.vid, SampleRate);
-            const float timeResolution = GetTimeResolution(SampleRate);
+            const float time = GetTimeForVertexIndex(appdata.vid, SampleRateFrom);
+            const float timeResolution = GetTimeResolution(SampleRateFrom);
             const float3 forward = mul(WaveOriginToWorldMatrix, float3(0, 0, 1));
 
             float3 samplePosition, nextSamplePosition;
             float3 sampleTangent, nextSampleTangent;
             for (int index = 0; index < WaveCount * 2; index += 2)
             {
-                const float4 initial = WaveData[index];
-                const float4 target = WaveData[index + 1];
-                const float4 current = lerp(initial, target, lerpTime);
+                const float4x4 data = WaveTransitionData[index];
+                const float4 startWave = data[0];
+                const float3 startAxis = data[1].xyz;
+                const float animation = data[1].w;
+                const float4 endWave = data[2];
+                const float3 endAxis = data[3];
+                
+                const float4 current = lerp(startWave, endWave, lerpTime);
                 const float frequency = current.x, amplitude = current.y, phase = current.z;
-                const float3 displacementAxis = lerp(DisplacementAxes[index].xyz, DisplacementAxes[index + 1].xyz,
-                                                     lerpTime);
-                const Wave wave = ConstructWave(frequency, amplitude, phase, initial.w, target.w, lerpTime);
+                const float3 displacementAxis = lerp(startAxis, endAxis,lerpTime);
+                const Wave wave = ConstructWave(frequency, amplitude, phase, startWave.w, endWave.w, lerpTime);
                 AppendPositionAndTangent(time, timeResolution, wave, forward, displacementAxis, samplePosition,
                                          nextSamplePosition, sampleTangent, nextSampleTangent);
             }
@@ -112,7 +120,7 @@ Shader "JamUp/ProdeduralWave"
 
             float3 normal;
             const float3 localPosition = GetVertexPosition(appdata.vid, samplePosition, nextSamplePosition,
-                                                           sampleTangent, nextSampleTangent, Thickness, normal);
+                                                           sampleTangent, nextSampleTangent, ThicknessFrom, normal);
 
             appdata.vertex.xyz = localPosition;
             appdata.normal = normal;

@@ -7,13 +7,15 @@ namespace JamUp.Waves.Scripts.API
     {
         public List<KeyFrame> Frames { get; }
 
-        public Signal(params KeyFrame[] frames)
+        public Signal(float rootNote, params KeyFrame[] frames)
         {
-            
-            Frames = frames.ToList();
+            Frames = frames is null || frames.Length == 0 ? new List<KeyFrame>() : frames.ToList();
         }
 
-        public void AddFrame(KeyFrame frame) => Frames.Add(frame);
+        public void AddFrame(KeyFrame frame)
+        {
+            Frames?.Add(frame);
+        }
 
         public void AddFrames(params KeyFrame[] frames) => Frames.AddRange(frames);
     }
