@@ -50,13 +50,17 @@ export const addAt = (frame: {nameof(KeyFrame)}, time: number): void => {{
             NativeArray<CurrentWavesElement> x = new NativeArray<CurrentWavesElement>(1, Allocator.Temp);
             x[0] = new CurrentWavesElement()
             {
-                Value = new float4x4(new float4(0, 4, 8, 12),
-                                     new float4(1, 5, 9, 13),
-                                     new float4(2, 6, 10, 14),
-                                     new float4(3, 7, 11, 15))
+                Value = new float4x4(
+                                     new float4(1, 2, 3, 4), 
+                                     new float4(1, 2, 3, 4) + 4, 
+                                     new float4(1, 2, 3, 4) + 8, 
+                                     new float4(1, 2, 3, 4) + 12)
             };
-            NativeArray<Matrix4x4> y = x.Reinterpret<Matrix4x4>();
-            Debug.Log(y[0]);
+            NativeArray<float> y = x.Reinterpret<float>(sizeof(float) * 16);
+            foreach (var a in y)
+            {
+                Debug.Log(a);
+            }
             x.Dispose();
         }
     }

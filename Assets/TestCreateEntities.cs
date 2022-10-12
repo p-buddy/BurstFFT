@@ -13,7 +13,7 @@ public class TestCreateEntities : MonoBehaviour
         Signal signal = new Signal(100f);
         signal.AddFrame(new KeyFrame(10f, 100, ProjectionType.Perspective, 1.0f, new []
         {
-            new WaveState(1f, 1f, 0f, WaveType.Sine, new SimpleFloat3(0f, 1f, 0f))
+            new WaveState(1f, 1f, 0f, WaveType.Sine, new Vector(0f, 1f, 0f))
         }, 1f));
         CreateSignalEntitiesSystem system = World.DefaultGameObjectInjectionWorld.GetOrCreateSystem<CreateSignalEntitiesSystem>();
         //system.EnqueueSignal(in signal);

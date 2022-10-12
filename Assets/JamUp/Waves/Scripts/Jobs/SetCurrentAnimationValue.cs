@@ -5,15 +5,16 @@ using Unity.Entities;
 
 namespace JamUp.Waves.Scripts
 {
-    public struct SetCurrentAnimationValue<TType, TCurrent, TBuffer>: IJobEntityBatch
-        where TType : new()
-        where TCurrent : struct, IValueSettable<Animation<TType>>, IComponentData
-        where TBuffer : struct, IAnimatable, IValuable<TType>, IBufferElementData
+    [BurstCompile]
+    public struct SetCurrentAnimationValue<TCurrent, TBuffer>: IJobEntityBatch
+        where TCurrent : struct, IValueSettable<Animation<float>>, IComponentData
+        where TBuffer : struct, IAnimatable, IValuable<float>, IBufferElementData
     {
+        [ReadOnly]
         public ComponentTypeHandle<TCurrent> CurrentHandle;
+        
         public BufferTypeHandle<TBuffer> BufferHandle;
 
-        [BurstCompile]
         public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
         {
             NativeArray<TCurrent> currents = batchInChunk.GetNativeArray(CurrentHandle);
@@ -25,7 +26,7 @@ namespace JamUp.Waves.Scripts
                 DynamicBuffer<TBuffer> buffer = buffers[i];
                 
                 TBuffer from = buffer[0];
-                current.Value = new Animation<TType>(from.Value, buffer[1].Value, from.AnimationCurve);
+                current.Value = new Animation<float>(from.Value, buffer[1].Value, from.AnimationCurve);
                 
                 buffer.RemoveAt(0);
             }

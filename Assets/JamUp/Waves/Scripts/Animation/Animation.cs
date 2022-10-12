@@ -1,3 +1,5 @@
+using Unity.Mathematics;
+
 namespace JamUp.Waves.Scripts
 {
     public readonly struct Animation<T>
@@ -11,12 +13,6 @@ namespace JamUp.Waves.Scripts
             From = from;
             To = to;
             Curve = curve;
-        }
-
-        public T Lerp(float t)
-        {
-            // TODO
-            return From;
         }
     }
 }

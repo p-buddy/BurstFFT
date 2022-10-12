@@ -1,4 +1,5 @@
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -10,7 +11,9 @@ namespace JamUp.Waves.Scripts
     {
         public AnimatableShaderProperty<float> Property;
         
+        [ReadOnly]
         public ComponentTypeHandle<PropertyBlockReference> PropertyBlockHandle;
+        [ReadOnly]
         public ComponentTypeHandle<TCurrent> CurrentHandle;
 
         public void Execute(ArchetypeChunk batchInChunk, int batchIndex)

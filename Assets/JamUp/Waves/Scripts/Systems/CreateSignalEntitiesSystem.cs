@@ -3,15 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using JamUp.Waves.Scripts.API;
-using pbuddy.TypeScriptingUtility.RuntimeScripts;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
-using UnityEngine;
-using KeyFrame = JamUp.Waves.Scripts.API.KeyFrame;
-
 
 namespace JamUp.Waves.Scripts
 {
@@ -43,7 +39,7 @@ namespace JamUp.Waves.Scripts
                                                          .ToArray();
             
             archetype = EntityManager.CreateArchetype(typesForArchetype);
-            queryForArchetype = GetEntityQuery(ComponentType.ReadOnly<SignalEntity>());
+            queryForArchetype = GetEntityQuery(archetype.GetComponentTypes());
 
             beginEcbSystem = World.GetOrCreateSystem<BeginSimulationEntityCommandBufferSystem>();
             drawerSystem = World.GetOrCreateSystem<SignalDrawerSystem>();
@@ -56,19 +52,76 @@ namespace JamUp.Waves.Scripts
             EnqueueSignal(in signal);
         }
         
+
+        private readonly struct ComponentsForJob
+        {
+            public NativeArray<CurrentTimeFrame> TimeFrames { get; }
+            public NativeArray<CurrentWaveCount> WaveCounts { get; }
+            public NativeArray<CurrentProjection> Projections { get; }
+            public NativeArray<CurrentThickness> Thicknesses { get; }
+            public NativeArray<CurrentSignalLength> SignalLengths { get; }
+            public NativeArray<CurrentSampleRate> SampleRates { get; }
+            public JobHandle Dependency { get; }
+            public ComponentsForJob(EntityQuery query, int entityCount)
+            {
+                if (entityCount == 0)
+                {
+                    TimeFrames = new (0, Allocator.TempJob);
+                    WaveCounts = new (0, Allocator.TempJob);
+                    Projections = new (0, Allocator.TempJob);
+                    Thicknesses =  new (0, Allocator.TempJob);
+                    SignalLengths = new (0, Allocator.TempJob);
+                    SampleRates = new (0, Allocator.TempJob);
+                    Dependency = default;
+                    return;
+                }
+                
+                TimeFrames = GetComponents<CurrentTimeFrame>(query, out JobHandle a);
+                WaveCounts = GetComponents<CurrentWaveCount>(query, out JobHandle b);
+                Projections = GetComponents<CurrentProjection>(query, out JobHandle c);
+                Thicknesses = GetComponents<CurrentThickness>(query, out JobHandle d);
+                SignalLengths = GetComponents<CurrentSignalLength>(query, out JobHandle e);
+                SampleRates = GetComponents<CurrentSampleRate>(query, out JobHandle f);
+                Dependency = JobHandle.CombineDependencies(JobHandle.CombineDependencies(a, b, c),
+                                                           JobHandle.CombineDependencies(d, e, f));
+            }
+            
+            private static NativeArray<TComponent> GetComponents<TComponent>(EntityQuery query, out JobHandle handle)
+                where TComponent : struct, IComponentData =>
+                query.ToComponentDataArrayAsync<TComponent>(Allocator.TempJob, out handle);
+
+            public void Dispose(JobHandle dependency)
+            {
+                TimeFrames.Dispose(dependency);
+                WaveCounts.Dispose(dependency);
+                Projections.Dispose(dependency);
+                Thicknesses.Dispose(dependency);
+                SampleRates.Dispose(dependency);
+                SignalLengths.Dispose(dependency);
+            }
+        }
+
         protected override void OnUpdate()
         {
-            if (signals.Count == 0) return;
+            int signalCount = signals.Count;
             
-            NativeArray<Entity> archetypeEntities = queryForArchetype.ToEntityArray(Allocator.TempJob);
-            
-            ComponentDataFromEntity<CurrentTimeFrame> timeFrameForEntity = GetComponentDataFromEntity<CurrentTimeFrame>(true);
-            ComponentDataFromEntity<CurrentWaveCount> waveCountForEntity = GetComponentDataFromEntity<CurrentWaveCount>(true);
-            ComponentDataFromEntity<CurrentProjection> projectionForEntity = GetComponentDataFromEntity<CurrentProjection>(true);
-            ComponentDataFromEntity<CurrentThickness> thicknessForEntity = GetComponentDataFromEntity<CurrentThickness>(true);
-            ComponentDataFromEntity<CurrentSignalLength> signalLengthForEntity = GetComponentDataFromEntity<CurrentSignalLength>(true);
-            ComponentDataFromEntity<CurrentSampleRate> sampleRateForEntity = GetComponentDataFromEntity<CurrentSampleRate>(true);
+            if (signalCount == 0) return;
 
+            int entityCount = queryForArchetype.CalculateEntityCount();
+            
+            int newEntityCount = math.max(signalCount - entityCount, 0);
+            NativeArray<PropertyBlockReference> propertyBlockReferences = new(newEntityCount, Allocator.TempJob);
+            for (int i = 0; i < newEntityCount; i++)
+            {
+                (int id, GCHandle handle) = drawerSystem.GetPropertyBlockHandle();
+                propertyBlockReferences[i] = new PropertyBlockReference(id, handle);
+            }
+
+            var archetypeEntities = queryForArchetype.ToEntityArrayAsync(Allocator.TempJob, out JobHandle entityHandle);
+            ComponentsForJob componentsForJob = new ComponentsForJob(queryForArchetype, entityCount);
+
+            JobHandle dependency = JobHandle.CombineDependencies(entityHandle, componentsForJob.Dependency, Dependency);
+            
             BufferFromEntity<CurrentWavesElement> wavesForEntity = GetBufferFromEntity<CurrentWavesElement>(true);
             BufferFromEntity<CurrentWaveAxes> axesForEntity = GetBufferFromEntity<CurrentWaveAxes>(true);
 
@@ -82,9 +135,14 @@ namespace JamUp.Waves.Scripts
                 EntityCommandBuffer ecb = beginEcbSystem.CreateCommandBuffer();
                 
                 Signal signal = signals[index];
-                (NativeArray<CreateEntity.PackedFrame> frames, NativeArray<Animatable<WaveState>> waves) = CreateSignalEntity(in signal);
-
-                JobHandle handle = new CreateEntity()
+                var (frames, waves) = CreateSignalEntity(in signal);
+                
+#if MULTITHREADED
+                JobHandle handle = new CreateEntity
+#else
+                JobHandle handle = dependency.CompleteAndGetBack();
+                new CreateEntity
+#endif
                 {
                     PackedFrames = frames,
                     Waves = waves,
@@ -92,18 +150,22 @@ namespace JamUp.Waves.Scripts
                     Index = index,
                     ECB = ecb,
                     TimeNow = timeNow,
+                    PropertyBlocks = propertyBlockReferences,
                     EntityArchetype = localArchetype,
-                    TimeFrameForEntity = timeFrameForEntity,
-                    WaveCountForEntity = waveCountForEntity,
-                    ProjectionForEntity = projectionForEntity,
-                    ThicknessForEntity = thicknessForEntity,
-                    SignalLengthForEntity = signalLengthForEntity,
-                    SampleRateForEntity = sampleRateForEntity,
+                    TimeFrames = componentsForJob.TimeFrames,
+                    WaveCounts = componentsForJob.WaveCounts,
+                    ProjectionForEntity = componentsForJob.Projections,
+                    ThicknessForEntity = componentsForJob.Thicknesses,
+                    SignalLengthForEntity = componentsForJob.SignalLengths,
+                    SampleRateForEntity = componentsForJob.SampleRates,
                     WavesForEntity = wavesForEntity,
                     AxesForEntity = axesForEntity,
-
-                }.Schedule(Dependency);
-
+                }
+#if MULTITHREADED
+                    .Schedule(dependency);
+#else
+                    .Run();
+#endif
                 frames.Dispose(handle);
                 waves.Dispose(handle);
 
@@ -111,10 +173,12 @@ namespace JamUp.Waves.Scripts
             }
 
             Dependency = JobHandle.CombineDependencies(handles);
-            beginEcbSystem.AddJobHandleForProducer(Dependency);
-            
             handles.Dispose();
+
+            beginEcbSystem.AddJobHandleForProducer(Dependency);
             archetypeEntities.Dispose(Dependency);
+            propertyBlockReferences.Dispose(Dependency);
+            componentsForJob.Dispose(Dependency);
 
             signals.Clear();
             GC.Collect();

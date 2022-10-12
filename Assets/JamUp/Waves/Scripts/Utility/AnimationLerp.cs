@@ -1,10 +1,17 @@
 using System;
 using Unity.Burst;
+using Unity.Mathematics;
 
 namespace JamUp.Waves.Scripts
 {
     public static class AnimationLerp
     {
+        public static float Lerp(this Animation<float> animation, float t)
+        {
+            float s = animation.Curve.GetLerpParameter(t);
+            return math.lerp(animation.From, animation.To, s);
+        }
+        
         [BurstCompile]
         public static float GetLerpParameter(this AnimationCurve curve, float t)
         {
