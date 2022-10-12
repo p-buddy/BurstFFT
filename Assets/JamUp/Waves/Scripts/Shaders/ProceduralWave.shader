@@ -57,6 +57,9 @@ Shader "JamUp/ProdeduralWave"
         float ProjectionAnimation;
         float ProjectionFrom;
         float ProjectionTo;
+
+        //
+        // Frequency Phase 
         
         float StartTime;
         float EndTime;

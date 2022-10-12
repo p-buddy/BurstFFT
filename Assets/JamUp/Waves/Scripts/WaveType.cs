@@ -1,5 +1,8 @@
+using System;
+
 namespace JamUp.Waves.Scripts
 {
+    [Flags]
     public enum WaveType
     {
         Sine = 0x00000001,

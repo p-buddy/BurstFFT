@@ -38,7 +38,7 @@ namespace JamUp.Waves.Scripts.API
             internal static object Vector(string query)
             {
                 var coords = query.Split(',').ToList().Select(float.Parse).ToArray();
-                return new SimpleFloat3(coords[0], coords[1], coords[2]);
+                return new Vector(coords[0], coords[1], coords[2]);
             }
         }
 
@@ -83,7 +83,7 @@ namespace JamUp.Waves.Scripts.API
             List<List<WaveState>> waves = new List<List<WaveState>>();
 
             KeyFrame defaultFrame = new KeyFrame(1f, 1000, ProjectionType.Orthographic, 0.1f, null, 10f);
-            WaveState defaultWave = new WaveState(1f, 1f, 0f, WaveType.Sine, new SimpleFloat3(1f, 0, 0));
+            WaveState defaultWave = new WaveState(1f, 1f, 0f, WaveType.Sine, new Vector(1f, 0, 0));
             
             for (var index = 0; index < lines.Length; index++)
             {

@@ -8,5 +8,6 @@ namespace JamUp.Waves.Scripts
 
         public float EndTime;
         public bool UpdateRequired(float time, float padding) => time + padding >= EndTime;
+        public float Interpolant(float now) => (now - StartTime) / (EndTime - StartTime) ;
     }
 }

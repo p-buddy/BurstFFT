@@ -10,13 +10,13 @@ namespace JamUp.Waves.Scripts.API
         public float Amplitude { get; }
         public WaveType WaveType { get; }
         public float PhaseDegrees { get; }
-        public SimpleFloat3 DisplacementAxis { get; }
+        public Vector DisplacementAxis { get; }
 
         public WaveState(float frequency,
                          float amplitude,
                          float phaseDegrees,
                          WaveType waveType,
-                         SimpleFloat3 displacementAxis)
+                         Vector displacementAxis)
         {
             Frequency = frequency;
             Amplitude = amplitude;
@@ -26,17 +26,33 @@ namespace JamUp.Waves.Scripts.API
         }
 
         public WaveState ZeroedAmplitude => new(Frequency, 0f, PhaseDegrees, WaveType, DisplacementAxis);
-
-        public float4 PackSettings => new (Frequency, Amplitude, math.radians(PhaseDegrees), (float)WaveType);
         
         public static implicit operator Wave(WaveState state) =>
             new (state.WaveType, state.Frequency, math.radians(state.PhaseDegrees), state.Amplitude);
 
-        public static float4x4 Pack(in WaveState first, in WaveState second, float m31 = default, float m33 = default) =>
-            math.transpose(new float4x4(first.PackSettings,
-                                        new float4(first.DisplacementAxis, m31),
-                                        second.PackSettings,
-                                        new float4(second.DisplacementAxis, m33)));
+        public AllWavesElement AsWaveElement(AnimationCurve curve = AnimationCurve.Linear) => new()
+        {
+            Frequency = Frequency,
+            Amplitude = Amplitude,
+            Phase = math.radians(PhaseDegrees),
+            AnimationCurve = curve,
+            DisplacementAxis = DisplacementAxis,
+            WaveTypeRatio = new float4(Sine, Square, Triangle, Sawtooth),
+        };
+        
+        public AllWavesElement AsWaveElement(float4 waveTypeRatio, AnimationCurve curve = AnimationCurve.Linear) => new()
+        {
+            Frequency = Frequency,
+            Amplitude = Amplitude,
+            Phase = math.radians(PhaseDegrees),
+            AnimationCurve = curve,
+            DisplacementAxis = DisplacementAxis,
+            WaveTypeRatio = waveTypeRatio,
+        };
 
+        private int Sine => (int)(WaveType.Sine & WaveType);
+        private int Square => (int)(WaveType.Square & WaveType) >> 1;
+        private int Triangle => (int)(WaveType.Triangle & WaveType) >> 2;
+        private int Sawtooth => (int)(WaveType.Sawtooth & WaveType) >> 3;
     }
 }

@@ -12,5 +12,11 @@ namespace JamUp.Waves.Scripts
             To = to;
             Curve = curve;
         }
+
+        public T Lerp(float t)
+        {
+            // TODO
+            return From;
+        }
     }
 }
