@@ -45,7 +45,7 @@ namespace JamUp.Waves.Scripts
             drawerSystem = World.GetOrCreateSystem<SignalDrawerSystem>();
             
             Signal signal = new Signal(100f);
-            signal.AddFrame(new KeyFrame(10f, 100, ProjectionType.Perspective, 1.0f, new []
+            signal.AddFrame(new KeyFrame(100f, 100, ProjectionType.Perspective, 1.0f, new []
             {
                 new WaveState(1f, 1f, 0f, WaveType.Sine, new Vector(0f, 1f, 0f))
             }, 1f));

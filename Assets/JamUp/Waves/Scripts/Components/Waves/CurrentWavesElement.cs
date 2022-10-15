@@ -1,11 +1,13 @@
 using JamUp.Waves.Scripts.API;
 using Unity.Entities;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace JamUp.Waves.Scripts
 {
     public struct CurrentWavesElement: IBufferElementData, IValueSettable<float4x4>, IRequiredInArchetype
     { 
+        [field: SerializeField]
         public float4x4 Value { get; set; }
         public float3 StartFreqPhaseAmp => Value.c0.xyz;
         public AnimationCurve AnimationCurve => (AnimationCurve)(int)Value.c0.w;

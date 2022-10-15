@@ -2,12 +2,12 @@
 #include "WaveType.cginc"
 #include "Math.cginc"
 
-float TimeToRadians(in float time)
+float TimeToRadians(const in float time)
 {
     return TwoPI * time;
 }
 
-float GetValueAtTime(in Wave wave, in float time)
+float GetValueAtTime(const in Wave wave, const in float time)
 {
     const float rotationAmount = TimeToRadians(time) * wave.Frequency + wave.PhaseRadians;
     const float sineValue = sin(rotationAmount);
@@ -17,29 +17,21 @@ float GetValueAtTime(in Wave wave, in float time)
     const float triangleFactor = wave.Amplitude * TwoOverPI * asin(sineValue);
     const float sawToothFactor = wave.Amplitude * -TwoOverPI * atan(1.0f / tan(rotationAmount - PIOverTwo));
 
-    const float2 lerp = float2(1 - wave.TypeRatio, wave.TypeRatio);
-    
-    const float2 sine = sineFactor * float2(SineWaveType & wave.WaveType) * lerp;
-    const float2 square = squareFactor * float2((SquareWaveType & wave.WaveType) >> 1) * lerp;
-    const float2 tri = triangleFactor * float2((TriangleWaveType & wave.WaveType) >> 2) * lerp;
-    const float2 sawtooth = sawToothFactor * float2((SawtoothWaveType & wave.WaveType) >> 3) * lerp;
-    const float2 sum = sine + square + tri + sawtooth;
-    
-    return dot(sum, 1);
+    return dot(wave.WaveTypeRatio, float4(sineFactor, squareFactor, triangleFactor, sawToothFactor));
 }
 
-float3 GetDisplacementAtTime(in Wave wave, in float time, in float3 displacementVector, in float3 propagationAxis)
+float3 GetDisplacementAtTime(const in Wave wave, const in float time, const in float3 displacementVector,const in float3 propagationAxis)
 {
     return GetValueAtTime(wave, time) * displacementVector + propagationAxis * time;
 }
 
-float GetTimeResolution(in uint sampleRate)
+float GetTimeResolution(const in uint sampleRate)
 {
     return float(1.0f / sampleRate);
 }
 
-float3 GetTangentAtTime(in Wave wave, in float time, in float timeResolution,
-                        float3 displacementVector, float3 timeAxis)
+float3 GetTangentAtTime(const in Wave wave, const in float time, const in float timeResolution,
+                        const float3 displacementVector, const float3 timeAxis)
 {
     const float ahead = GetValueAtTime(wave, time + timeResolution);
     const float behind = GetValueAtTime(wave, time - timeResolution);
@@ -59,13 +51,14 @@ struct CoordinateAxes
 // 3 per the 8 triangular faces that form the shape that represents a 'sample' of a wave at a given point of time)
 // to which time segment of the wave it should correspond to.
 // In other words, 24 vertices will correspond to the same segment of the wave.
-float GetTimeForVertexIndex(in uint vertexIndex, in uint sampleRate)
+float GetTimeForVertexIndex(const in uint vertexIndex, const in uint sampleRate)
 {
     const uint sampleIndex = vertexIndex / 24;
     return float(sampleIndex) / float(sampleRate);
 }
 
-Wave SinToCos(in Wave wave)
+/*
+Wave SinToCos(const in Wave wave)
 {
     Wave cosWave;
     cosWave.Amplitude = wave.Amplitude;
@@ -73,7 +66,7 @@ Wave SinToCos(in Wave wave)
     cosWave.PhaseRadians = wave.PhaseRadians + PIOverTwo;
     cosWave.WaveType = wave.WaveType;
     return cosWave;
-}
+}*/
 
 struct DebugVertexPosition
 {

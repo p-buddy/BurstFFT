@@ -26,17 +26,17 @@ namespace JamUp.Waves.Scripts
         private readonly Queue<int> freePropertyBlockIDs = new ();
         private readonly List<MaterialPropertyBlock> propertyBlocks = new();
         private readonly List<GCHandle> handles = new ();
-
-        private Matrix4x4 localToWorld;
-        private Matrix4x4 worldToLocal;
         
         private readonly ShaderProperty<int> waveCountProperty = new ("WaveCount");
         private readonly ShaderProperty<Matrix4x4[]> waveDataProperty = new ("WaveTransitionData");
-        private readonly ShaderProperty<Matrix4x4[]> waveAxesProperty = new ("WaveAxesData");
+        private readonly ShaderProperty<float3[]> waveAxesProperty = new ("WaveAxesData");
 
         private readonly ShaderProperty<float> startTimeProperty = new("StartTime");
         private readonly ShaderProperty<float> endTimeProperty = new("EndTime");
-        
+
+        private ShaderProperty<Matrix4x4> waveOriginToWorldProperty;
+        private ShaderProperty<Matrix4x4> worldToWaveOriginProperty;
+
         protected override void OnCreate()
         {
             base.OnCreate();
@@ -44,9 +44,12 @@ namespace JamUp.Waves.Scripts
             endSimulationEcbSystem = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
 
             Transform transform = new GameObject().transform;
-            localToWorld = transform.localToWorldMatrix;
-            worldToLocal = transform.worldToLocalMatrix;
+            Matrix4x4 localToWorld = transform.localToWorldMatrix;
+            Matrix4x4 worldToLocal = transform.worldToLocalMatrix;
             Object.Destroy(transform.gameObject);
+
+            waveOriginToWorldProperty = new ShaderProperty<Matrix4x4>("WaveOriginToWorldMatrix").WithValue(localToWorld);
+            worldToWaveOriginProperty = new ShaderProperty<Matrix4x4>("WorldToWaveOriginMatrix").WithValue(worldToLocal);
             
             bounds = new Bounds(Vector3.zero, Vector3.one * 50f);
             material = Resources.Load<Material>("WaveDrawer");
@@ -88,6 +91,7 @@ namespace JamUp.Waves.Scripts
                     .ForEach((in PropertyBlockReference propertyBlockRef, in VertexCount vertexCount) =>
                     {
                         MaterialPropertyBlock propertyBlock = propertyBlocks[propertyBlockRef.ID];
+                        DebugPropertyBlock(propertyBlock);
                         int count = vertexCount.Value;
                         Graphics.DrawProcedural(material, bounds, topology, count, 0, null, propertyBlock, shadow);
                     })
@@ -208,7 +212,7 @@ namespace JamUp.Waves.Scripts
                                                 NativeArray<float4x4> native = waves.ToNativeArray(Allocator.Temp).Reinterpret<float4x4>();
                                                 for (int i = 0; i < native.Length; i++)
                                                 {
-                                                    native[i] = math.transpose(native[i]); // might not be necessary
+                                                    //native[i] = math.transpose(native[i]); // might not be necessary
                                                 }
                                                 block.SetMatrixArray(wavesId, native.Reinterpret<Matrix4x4>().ToArray());
                                                 native.Dispose();
@@ -285,9 +289,9 @@ namespace JamUp.Waves.Scripts
                 return (id, handle);
             }
             
-            MaterialPropertyBlock newBlock = new MaterialPropertyBlock();
-            newBlock.Set(new ShaderProperty<Matrix4x4>("WaveOriginToWorldMatrix").WithValue(localToWorld));
-            newBlock.Set(new ShaderProperty<Matrix4x4>("WorldToWaveOriginMatrix").WithValue(worldToLocal));
+            MaterialPropertyBlock newBlock = new();
+            newBlock.Set(waveOriginToWorldProperty);
+            newBlock.Set(worldToWaveOriginProperty);
             
             GCHandle newHandle = GCHandle.Alloc(newBlock);
             propertyBlocks.Add(newBlock);
@@ -299,6 +303,22 @@ namespace JamUp.Waves.Scripts
         {
             handles[id].Free();
             freePropertyBlockIDs.Enqueue(id);
+        }
+
+        private void DebugPropertyBlock(MaterialPropertyBlock block)
+        {
+            int waveCount = block.GetInt(waveCountProperty.ID);
+            
+            Debug.Log($"{nameof(waveCount)}: {waveCount}");
+            
+            if (waveCount > 0)
+            {
+                Debug.Log(string.Join("\n-------------\n", block.GetMatrixArray(waveDataProperty.ID)));
+                Debug.Log(string.Join(", ", block.GetFloatArray(waveAxesProperty.ID)));
+            }
+            Debug.Log(block.GetFloat("SampleRateFrom"));
+            Debug.Log(block.GetFloat(startTimeProperty.ID));
+            Debug.Log(block.GetFloat(endTimeProperty.ID));
         }
     }
 }

@@ -27,8 +27,7 @@ Shader "JamUp/ProdeduralWave"
         const static int NumberOfSupportedWaves = 10;
 
         //tint of the texture
-
-
+        
         /* BEGIN SHADER SETTINGS */
         half4 _Color;
         half Smoothness;
@@ -39,9 +38,9 @@ Shader "JamUp/ProdeduralWave"
         float4x4 WorldToWaveOriginMatrix;
 
         // Animatable Sample Rate
-        int SampleRateAnimation;
-        int SampleRateFrom;
-        int SampleRateTo;
+        float SampleRateAnimation;
+        float SampleRateFrom;
+        float SampleRateTo;
 
         // Animatable Thickness
         float ThicknessAnimation;
@@ -49,23 +48,22 @@ Shader "JamUp/ProdeduralWave"
         float ThicknessTo;
 
         // Animatable Signal Length
-        int SignalLengthAnimation;
-        int SignalLengthFrom;
-        int SignalLengthTo;
+        float SignalLengthAnimation;
+        float SignalLengthFrom;
+        float SignalLengthTo;
 
         // Animatable Projection
         float ProjectionAnimation;
         float ProjectionFrom;
         float ProjectionTo;
-
-        //
-        // Frequency Phase 
         
         float StartTime;
         float EndTime;
 
         int WaveCount;
         float4x4 WaveTransitionData[NumberOfSupportedWaves];
+
+        float WaveAxesData[NumberOfSupportedWaves * 3 * 2];
 
         /* END SHADER SETTINGS */
 
@@ -101,16 +99,25 @@ Shader "JamUp/ProdeduralWave"
             for (int index = 0; index < WaveCount * 2; index += 2)
             {
                 const float4x4 data = WaveTransitionData[index];
-                const float4 startWave = data[0];
-                const float3 startAxis = data[1].xyz;
-                const float animation = data[1].w;
-                const float4 endWave = data[2];
-                const float3 endAxis = data[3];
                 
-                const float4 current = lerp(startWave, endWave, lerpTime);
-                const float frequency = current.x, amplitude = current.y, phase = current.z;
+                const float3 startFreqAmpPhase = data[0].xyz;
+                const float3 endFreqAmpPhase = data[2].xyz;
+                const float3 currentFreqAmpPhase = lerp(startFreqAmpPhase, endFreqAmpPhase, lerpTime);
+                const float animation = data[0].w;
+
+                const float4 startWaveTypeRatio = data[1];
+                const float4 endWaveTypeRatio = data[3];
+                const float4 currentWaveTypeRatio = lerp(startWaveTypeRatio, endWaveTypeRatio, lerpTime);
+
+                int axisIndex = index * 3 * 2;
+                const float3 startAxis = float3(WaveAxesData[axisIndex++], WaveAxesData[axisIndex++], WaveAxesData[axisIndex++]);
+                const float3 endAxis = float3(WaveAxesData[axisIndex++], WaveAxesData[axisIndex++], WaveAxesData[axisIndex]);
+                
+                const float frequency = currentFreqAmpPhase.x;
+                const float amplitude = currentFreqAmpPhase.y;
+                const float phase = currentFreqAmpPhase.z;
                 const float3 displacementAxis = lerp(startAxis, endAxis,lerpTime);
-                const Wave wave = ConstructWave(frequency, amplitude, phase, startWave.w, endWave.w, lerpTime);
+                const Wave wave = ConstructWave(frequency, amplitude, phase, currentWaveTypeRatio);
                 AppendPositionAndTangent(time, timeResolution, wave, forward, displacementAxis, samplePosition,
                                          nextSamplePosition, sampleTangent, nextSampleTangent);
             }
@@ -129,7 +136,7 @@ Shader "JamUp/ProdeduralWave"
             appdata.normal = normal;
             appdata.tangent.xyz = sampleTangent;
             appdata.color = float4(nextSampleTangent, 1);
-
+            
             // Transform modification
             unity_ObjectToWorld = WaveOriginToWorldMatrix;
             unity_WorldToObject = WorldToWaveOriginMatrix;

@@ -10,7 +10,6 @@ namespace JamUp.Waves.Scripts
         where TCurrent : struct, IValueSettable<Animation<float>>, IComponentData
         where TBuffer : struct, IAnimatable, IValuable<float>, IBufferElementData
     {
-        [ReadOnly]
         public ComponentTypeHandle<TCurrent> CurrentHandle;
         
         public BufferTypeHandle<TBuffer> BufferHandle;
@@ -22,11 +21,13 @@ namespace JamUp.Waves.Scripts
             
             for (int i = 0; i < batchInChunk.Count; i++)
             {
-                TCurrent current = currents[i];
                 DynamicBuffer<TBuffer> buffer = buffers[i];
                 
                 TBuffer from = buffer[0];
-                current.Value = new Animation<float>(from.Value, buffer[1].Value, from.AnimationCurve);
+                currents[i] = new TCurrent
+                {
+                    Value = new Animation<float>(from.Value, buffer[1].Value, from.AnimationCurve)
+                };
                 
                 buffer.RemoveAt(0);
             }
