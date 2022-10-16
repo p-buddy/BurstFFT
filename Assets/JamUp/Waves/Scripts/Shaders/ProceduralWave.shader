@@ -109,9 +109,9 @@ Shader "JamUp/ProdeduralWave"
                 const float4 endWaveTypeRatio = data[3];
                 const float4 currentWaveTypeRatio = lerp(startWaveTypeRatio, endWaveTypeRatio, lerpTime);
 
-                int axisIndex = index * 3 * 2;
-                const float3 startAxis = float3(WaveAxesData[axisIndex++], WaveAxesData[axisIndex++], WaveAxesData[axisIndex++]);
-                const float3 endAxis = float3(WaveAxesData[axisIndex++], WaveAxesData[axisIndex++], WaveAxesData[axisIndex]);
+                const int axisIndex = index * 3 * 2;
+                const float3 startAxis = float3(WaveAxesData[axisIndex + 0], WaveAxesData[axisIndex+1], WaveAxesData[axisIndex+2]);
+                const float3 endAxis = float3(WaveAxesData[axisIndex+3], WaveAxesData[axisIndex+4], WaveAxesData[axisIndex+5]);
                 
                 const float frequency = currentFreqAmpPhase.x;
                 const float amplitude = currentFreqAmpPhase.y;

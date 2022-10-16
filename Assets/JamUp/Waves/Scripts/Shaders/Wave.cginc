@@ -6,7 +6,7 @@ struct Wave
     float4 WaveTypeRatio;
 };
 
-Wave ConstructWave(const in float frequency, const in float amplitude, const in float phaseRadians, const in float4 waveTypeRatio)
+Wave ConstructWave(in float frequency, in float amplitude, in float phaseRadians, in float4 waveTypeRatio)
 {
     Wave wave;
     wave.Frequency = frequency;

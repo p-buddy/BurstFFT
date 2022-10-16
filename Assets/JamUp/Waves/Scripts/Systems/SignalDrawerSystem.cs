@@ -212,7 +212,7 @@ namespace JamUp.Waves.Scripts
                                                 NativeArray<float4x4> native = waves.ToNativeArray(Allocator.Temp).Reinterpret<float4x4>();
                                                 for (int i = 0; i < native.Length; i++)
                                                 {
-                                                    //native[i] = math.transpose(native[i]); // might not be necessary
+                                                    native[i] = math.transpose(native[i]); // might not be necessary
                                                 }
                                                 block.SetMatrixArray(wavesId, native.Reinterpret<Matrix4x4>().ToArray());
                                                 native.Dispose();

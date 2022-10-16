@@ -2,12 +2,12 @@
 #include "WaveType.cginc"
 #include "Math.cginc"
 
-float TimeToRadians(const in float time)
+float TimeToRadians(in float time)
 {
     return TwoPI * time;
 }
 
-float GetValueAtTime(const in Wave wave, const in float time)
+float GetValueAtTime(in Wave wave, in float time)
 {
     const float rotationAmount = TimeToRadians(time) * wave.Frequency + wave.PhaseRadians;
     const float sineValue = sin(rotationAmount);
@@ -20,18 +20,18 @@ float GetValueAtTime(const in Wave wave, const in float time)
     return dot(wave.WaveTypeRatio, float4(sineFactor, squareFactor, triangleFactor, sawToothFactor));
 }
 
-float3 GetDisplacementAtTime(const in Wave wave, const in float time, const in float3 displacementVector,const in float3 propagationAxis)
+float3 GetDisplacementAtTime(in Wave wave, in float time, in float3 displacementVector,in float3 propagationAxis)
 {
     return GetValueAtTime(wave, time) * displacementVector + propagationAxis * time;
 }
 
-float GetTimeResolution(const in uint sampleRate)
+float GetTimeResolution(in uint sampleRate)
 {
     return float(1.0f / sampleRate);
 }
 
-float3 GetTangentAtTime(const in Wave wave, const in float time, const in float timeResolution,
-                        const float3 displacementVector, const float3 timeAxis)
+float3 GetTangentAtTime(in Wave wave, in float time, in float timeResolution,
+                        in float3 displacementVector, in float3 timeAxis)
 {
     const float ahead = GetValueAtTime(wave, time + timeResolution);
     const float behind = GetValueAtTime(wave, time - timeResolution);
@@ -51,14 +51,14 @@ struct CoordinateAxes
 // 3 per the 8 triangular faces that form the shape that represents a 'sample' of a wave at a given point of time)
 // to which time segment of the wave it should correspond to.
 // In other words, 24 vertices will correspond to the same segment of the wave.
-float GetTimeForVertexIndex(const in uint vertexIndex, const in uint sampleRate)
+float GetTimeForVertexIndex(in uint vertexIndex, in uint sampleRate)
 {
     const uint sampleIndex = vertexIndex / 24;
     return float(sampleIndex) / float(sampleRate);
 }
 
 /*
-Wave SinToCos(const in Wave wave)
+Wave SinToCos(in Wave wave)
 {
     Wave cosWave;
     cosWave.Amplitude = wave.Amplitude;

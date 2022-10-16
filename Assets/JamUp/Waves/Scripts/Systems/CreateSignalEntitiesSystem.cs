@@ -45,9 +45,15 @@ namespace JamUp.Waves.Scripts
             drawerSystem = World.GetOrCreateSystem<SignalDrawerSystem>();
             
             Signal signal = new Signal(100f);
-            signal.AddFrame(new KeyFrame(100f, 100, ProjectionType.Perspective, 1.0f, new []
+            signal.AddFrame(new KeyFrame(1f, 1000, ProjectionType.Perspective, 0.1f, new []
             {
-                new WaveState(1f, 1f, 0f, WaveType.Sine, new Vector(0f, 1f, 0f))
+                new WaveState(1f, 1f, 90f, WaveType.Sine, new Vector(1f, 0f, 0f)),
+                new WaveState(1f, 1f, 90f, WaveType.Sine, new Vector(0f, 1f, 0f))
+            }, 1f));
+            signal.AddFrame(new KeyFrame(1f, 1000, ProjectionType.Perspective, 0.1f, new []
+            {
+                new WaveState(1f, 1f, 0f, WaveType.Sine, new Vector(1f, 0f, 0f)),
+                new WaveState(1f, 1f, 90f, WaveType.Sine, new Vector(1f, 0f, 0f))
             }, 1f));
             EnqueueSignal(in signal);
         }
