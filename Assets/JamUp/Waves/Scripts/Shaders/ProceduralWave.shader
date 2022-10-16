@@ -96,7 +96,7 @@ Shader "JamUp/ProdeduralWave"
 
             float3 samplePosition, nextSamplePosition;
             float3 sampleTangent, nextSampleTangent;
-            for (int index = 0; index < WaveCount * 2; index += 2)
+            for (int index = 0; index < WaveCount; index++)
             {
                 const float4x4 data = WaveTransitionData[index];
                 

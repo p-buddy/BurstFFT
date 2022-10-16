@@ -56,19 +56,21 @@ namespace JamUp.Waves.Scripts
             UpdateHandles[Kind.SignalLength] = SignalLength.Update(UpdateCurrent.SignalLength, system, dependency);
         }
 
-        public static JobHandle SetAll(ComponentSystemBase system)
+        public static JobHandle SetAll(ComponentSystemBase system, JobHandle dependency)
         {
-            NativeArray<JobHandle> handles = new NativeArray<JobHandle>(4, Allocator.Temp);
-            ComponentTypeHandle<PropertyBlockReference> blockHandle = system.GetComponentTypeHandle<PropertyBlockReference>();
-
-            handles[0] = Projection.Set(SetProperty.Projection, system, blockHandle, UpdateHandles[Kind.Projection]);
-            handles[1] = Thickness.Set(SetProperty.Thickness, system, blockHandle, UpdateHandles[Kind.Thickness]);
-            handles[2] = SampleRate.Set(SetProperty.SampleRate, system, blockHandle, UpdateHandles[Kind.SampleRate]);
-            handles[3] = SignalLength.Set(SetProperty.SignalLength, system, blockHandle, UpdateHandles[Kind.SignalLength]);
+            static JobHandle Dependency(Kind kind, JobHandle dependency) => JobHandle.CombineDependencies(dependency, UpdateHandles[kind]);
             
-            JobHandle combined = JobHandle.CombineDependencies(handles);
-            handles.Dispose();
-            return combined;
+            ComponentTypeHandle<PropertyBlockReference> blockRef = system.GetComponentTypeHandle<PropertyBlockReference>();
+
+            JobHandle handle = Projection.Set(SetProperty.Projection,
+                                              system,
+                                              blockRef,
+                                              Dependency(Kind.Projection, dependency));
+            handle = Thickness.Set(SetProperty.Thickness, system, blockRef, Dependency(Kind.Thickness, handle));
+            handle = SampleRate.Set(SetProperty.SampleRate, system, blockRef, Dependency(Kind.SampleRate, handle));
+            handle = SignalLength.Set(SetProperty.SignalLength, system, blockRef, Dependency(Kind.SignalLength, handle));
+
+            return handle;
         }
         
         public static JobHandle GetUpdateHandle(Kind a, Kind b) =>

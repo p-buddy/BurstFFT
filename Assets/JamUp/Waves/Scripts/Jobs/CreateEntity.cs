@@ -11,7 +11,7 @@ namespace JamUp.Waves.Scripts
     [BurstCompile]
     public struct CreateEntity : IJob
     {
-        private const int MaxWaveCount = 10;
+        public const int MaxWaveCount = 10;
         private const float AttackTime = 0.1f;
         private const float ReleaseTime = 0.01f;
 

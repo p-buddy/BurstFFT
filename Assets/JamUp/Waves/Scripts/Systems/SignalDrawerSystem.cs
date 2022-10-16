@@ -29,7 +29,7 @@ namespace JamUp.Waves.Scripts
         
         private readonly ShaderProperty<int> waveCountProperty = new ("WaveCount");
         private readonly ShaderProperty<Matrix4x4[]> waveDataProperty = new ("WaveTransitionData");
-        private readonly ShaderProperty<float3[]> waveAxesProperty = new ("WaveAxesData");
+        private readonly ShaderProperty<float[]> waveAxesProperty = new ("WaveAxesData");
 
         private readonly ShaderProperty<float> startTimeProperty = new("StartTime");
         private readonly ShaderProperty<float> endTimeProperty = new("EndTime");
@@ -56,6 +56,16 @@ namespace JamUp.Waves.Scripts
             Assert.IsNotNull(material);
         }
 
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+
+            foreach (GCHandle handle in handles)
+            {
+                handle.Free();
+            }
+        }
+
         protected override void OnUpdate()
         {
             Draw();
@@ -75,7 +85,7 @@ namespace JamUp.Waves.Scripts
             JobHandle vertexHandle = UpdateVertexCount(vertexDependency);
     
             JobHandle setWavesHandle = SetWaves(waveUpdates);
-            JobHandle setAnimatableHandle = FloatAnimationProperties.SetAll(this);
+            JobHandle setAnimatableHandle = FloatAnimationProperties.SetAll(this, setWavesHandle);
             
             JobHandle combinedSetHandle = JobHandle.CombineDependencies(setWavesHandle, setAnimatableHandle);
             
@@ -91,7 +101,7 @@ namespace JamUp.Waves.Scripts
                     .ForEach((in PropertyBlockReference propertyBlockRef, in VertexCount vertexCount) =>
                     {
                         MaterialPropertyBlock propertyBlock = propertyBlocks[propertyBlockRef.ID];
-                        DebugPropertyBlock(propertyBlock);
+                        //DebugPropertyBlock(propertyBlock);
                         int count = vertexCount.Value;
                         Graphics.DrawProcedural(material, bounds, topology, count, 0, null, propertyBlock, shadow);
                     })
@@ -192,46 +202,32 @@ namespace JamUp.Waves.Scripts
             int wavesId = waveDataProperty.ID;
             int waveAxesId = waveAxesProperty.ID;
             
-            JobHandle countHandle = Entities.WithoutBurst()
-                                            .WithAll<UpdateRequired>()
-                                            .WithName("SetWaves0")
-                                            .ForEach((in PropertyBlockReference propertyBlock,
-                                                      in CurrentWaveCount waveCount) =>
-                                            {
-                                                MaterialPropertyBlock block = (MaterialPropertyBlock)propertyBlock.Handle.Target;
-                                                block.SetInt(waveCountId, waveCount.Value);
-                                            }).ScheduleParallel(dependency);
-            
-            JobHandle wavesHandle = Entities.WithoutBurst()
-                                            .WithName("SetWaves1")
-                                            .WithAll<UpdateRequired>()
-                                            .ForEach((in PropertyBlockReference propertyBlock,
-                                                      in DynamicBuffer<CurrentWavesElement> waves) =>
-                                            {
-                                                MaterialPropertyBlock block = (MaterialPropertyBlock)propertyBlock.Handle.Target;
-                                                NativeArray<float4x4> native = waves.ToNativeArray(Allocator.Temp).Reinterpret<float4x4>();
-                                                for (int i = 0; i < native.Length; i++)
-                                                {
-                                                    native[i] = math.transpose(native[i]); // might not be necessary
-                                                }
-                                                block.SetMatrixArray(wavesId, native.Reinterpret<Matrix4x4>().ToArray());
-                                                native.Dispose();
-                                            }).ScheduleParallel(dependency);
-            
-            JobHandle axesHandle =  Entities.WithoutBurst()
-                                            .WithName("SetWaves2")
-                                            .WithAll<UpdateRequired>()
-                                            .ForEach((in PropertyBlockReference propertyBlock,
-                                                      in DynamicBuffer<CurrentWaveAxes> axes) =>
-                                           {
-                                               MaterialPropertyBlock block = (MaterialPropertyBlock)propertyBlock.Handle.Target;
-                                               NativeArray<float> native = axes.AsNativeArray()
-                                                                               .Reinterpret<float3x2>()
-                                                                               .Reinterpret<float>(sizeof(float) * 6);
-                                               block.SetFloatArray(waveAxesId, native.ToArray());
-                                           }).ScheduleParallel(dependency);
-            
-            return JobHandle.CombineDependencies(countHandle, wavesHandle, axesHandle);
+            return Entities.WithoutBurst()
+                           .WithAll<UpdateRequired>()
+                           .WithName("SetWaves")
+                           .ForEach((in PropertyBlockReference propertyBlock,
+                                     in CurrentWaveCount waveCount,
+                                     in DynamicBuffer<CurrentWavesElement> waves,
+                                     in DynamicBuffer<CurrentWaveAxes> axes) =>
+                           {
+                               MaterialPropertyBlock block = (MaterialPropertyBlock)propertyBlock.Handle.Target;
+                               block.SetInt(waveCountId, waveCount.Value);
+                                                
+                               NativeArray<float4x4> nativeWaves = waves.ToNativeArray(Allocator.Temp)
+                                                                        .Reinterpret<float4x4>();
+                               
+                               for (int i = 0; i < nativeWaves.Length; i++)
+                               {
+                                   nativeWaves[i] = math.transpose(nativeWaves[i]);
+                               }
+                               block.SetMatrixArray(wavesId, nativeWaves.Reinterpret<Matrix4x4>().ToArray());
+                               nativeWaves.Dispose();
+                                                
+                               NativeArray<float> nativeAxes = axes.AsNativeArray()
+                                                                   .Reinterpret<float3x2>()
+                                                                   .Reinterpret<float>(sizeof(float) * 6);
+                               block.SetFloatArray(waveAxesId, nativeAxes.ToArray());
+                           }).ScheduleParallel(dependency);
         }
         
         private JobHandle SetTime(JobHandle dependency)
@@ -292,6 +288,9 @@ namespace JamUp.Waves.Scripts
             MaterialPropertyBlock newBlock = new();
             newBlock.Set(waveOriginToWorldProperty);
             newBlock.Set(worldToWaveOriginProperty);
+            
+            newBlock.Set(waveDataProperty.WithValue(new Matrix4x4[CreateEntity.MaxWaveCount]));
+            newBlock.Set(waveAxesProperty.WithValue(new float[CreateEntity.MaxWaveCount * 3 * 2]));
             
             GCHandle newHandle = GCHandle.Alloc(newBlock);
             propertyBlocks.Add(newBlock);

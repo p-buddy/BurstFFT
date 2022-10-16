@@ -26,6 +26,11 @@ namespace JamUp.UnityUtility
             block.SetMatrixArray(property.ID, property.Value);
         }
         
+        public static void Set(this MaterialPropertyBlock block, ShaderProperty<float[]> property)
+        {
+            block.SetFloatArray(property.ID, property.Value);
+        }
+        
         public static void SetProperty<TData>(this MaterialPropertyBlock block, ShaderProperty<TData> property, TData toSet)
         {
             switch (toSet)
