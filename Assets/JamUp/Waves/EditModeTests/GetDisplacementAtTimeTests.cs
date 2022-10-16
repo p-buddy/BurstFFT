@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using JamUp.Waves.Scripts;
+using JamUp.Waves.RuntimeScripts;
 using NUnit.Framework;
 using Unity.Mathematics;
 using Assert = UnityEngine.Assertions.Assert;

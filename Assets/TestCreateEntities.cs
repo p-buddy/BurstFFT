@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
-using JamUp.Waves.Scripts;
-using JamUp.Waves.Scripts.API;
+using JamUp.Waves.RuntimeScripts;
+using JamUp.Waves.RuntimeScripts.API;
 using Unity.Entities;
 using UnityEngine;
 

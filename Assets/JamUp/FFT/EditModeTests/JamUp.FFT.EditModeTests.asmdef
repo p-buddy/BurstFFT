@@ -6,13 +6,13 @@
         "UnityEditor.TestRunner",
         "Unity.Mathematics",
         "pbuddy.StringUtility.RuntimeScripts",
-        "JamUp.Waves.Scripts",
         "JamUp.FFT.Scripts",
         "JamUp.Math.Scripts",
         "JamUp.NativeArrayUtility.Scripts",
         "Unity.Collections",
         "pbuddy.TestUtility.EditorScripts",
-        "JamUp.ThirdPart.ExternalFFT"
+        "JamUp.ThirdPart.ExternalFFT",
+        "JamUp.Waves.RuntimeScripts"
     ],
     "includePlatforms": [
         "Editor"

@@ -6,8 +6,8 @@
         "JamUp.UnityUtility.Scripts",
         "JamUp.FFT.Scripts",
         "JamUp.Math.Scripts",
-        "JamUp.Waves.Scripts",
-        "pbuddy.StringUtility.RuntimeScripts"
+        "pbuddy.StringUtility.RuntimeScripts",
+        "JamUp.Waves.RuntimeScripts"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using JamUp.Waves.Scripts;
+using JamUp.Waves.RuntimeScripts;
 using pbuddy.StringUtility.RuntimeScripts;
 
 namespace JamUp.Waves

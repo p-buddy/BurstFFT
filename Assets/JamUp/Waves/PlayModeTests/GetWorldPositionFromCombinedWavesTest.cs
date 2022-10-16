@@ -1,6 +1,6 @@
 using System.Collections;
 using System.Linq;
-using JamUp.Waves.Scripts;
+using JamUp.Waves.RuntimeScripts;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.TestTools;

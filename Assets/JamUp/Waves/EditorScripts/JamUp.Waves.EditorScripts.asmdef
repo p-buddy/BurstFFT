@@ -1,0 +1,20 @@
+{
+    "name": "JamUp.Waves.EditorScripts",
+    "rootNamespace": "",
+    "references": [
+        "GUID:734d92eba21c94caba915361bd5ac177",
+        "GUID:2a2982d3cde824fed902d32579a92eb8",
+        "GUID:c92f15fe9eef418ca032107c6ad6f9c5"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

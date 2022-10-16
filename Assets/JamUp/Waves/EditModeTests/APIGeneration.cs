@@ -1,7 +1,7 @@
 using System;
 using System.IO;
-using JamUp.Waves.Scripts;
-using JamUp.Waves.Scripts.API;
+using JamUp.Waves.RuntimeScripts;
+using JamUp.Waves.RuntimeScripts.API;
 using NUnit.Framework;
 using Unity.Collections;
 using Unity.Mathematics;

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using JamUp.Math;
 using JamUp.Waves;
-using JamUp.Waves.Scripts;
+using JamUp.Waves.RuntimeScripts;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;

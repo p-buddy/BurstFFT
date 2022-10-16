@@ -13,8 +13,7 @@ using UnityEngine.TestTools;
 
 using JamUp.DataVisualization;
 using JamUp.Math;
-using JamUp.Waves;
-using JamUp.Waves.Scripts;
+using JamUp.Waves.RuntimeScripts;
 
 namespace JamUp.FFT.PlayModeTests
 {

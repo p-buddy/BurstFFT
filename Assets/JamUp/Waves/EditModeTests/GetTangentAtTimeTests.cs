@@ -1,4 +1,4 @@
-using JamUp.Waves.Scripts;
+using JamUp.Waves.RuntimeScripts;
 using NUnit.Framework;
 using Unity.Mathematics;
 using UnityEngine;

@@ -9,9 +9,8 @@ using Unity.Jobs;
 using Random = Unity.Mathematics.Random;
 
 using JamUp.Math;
-using JamUp.Waves;
 using JamUp.NativeArrayUtility;
-using JamUp.Waves.Scripts;
+using JamUp.Waves.RuntimeScripts;
 using Unity.Mathematics;
 using UnityEngine;
 using Assert = UnityEngine.Assertions.Assert;

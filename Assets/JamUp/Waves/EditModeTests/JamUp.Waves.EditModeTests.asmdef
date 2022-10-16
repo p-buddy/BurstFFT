@@ -5,10 +5,10 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Unity.Mathematics",
-        "JamUp.Waves.Scripts",
         "pbuddy.ShaderUtility.EditorScripts",
         "pbuddy.StringUtility.RuntimeScripts",
-        "pbuddy.TypeScriptingUtility.RuntimeScripts"
+        "pbuddy.TypeScriptingUtility.RuntimeScripts",
+        "JamUp.Waves.RuntimeScripts"
     ],
     "includePlatforms": [
         "Editor"

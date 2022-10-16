@@ -6,11 +6,11 @@
         "UnityEditor.TestRunner",
         "Unity.Mathematics",
         "JamUp.DataVisualization.Scripts",
-        "JamUp.Waves.Scripts",
         "JamUp.FFT.Scripts",
         "JamUp.Math.Scripts",
         "JamUp.UnityUtility.Scripts",
-        "pbuddy.TestUtility.EditorScripts"
+        "pbuddy.TestUtility.EditorScripts",
+        "JamUp.Waves.RuntimeScripts"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

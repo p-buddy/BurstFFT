@@ -1,6 +1,5 @@
 using System;
-using JamUp.Waves;
-using JamUp.Waves.Scripts;
+using JamUp.Waves.RuntimeScripts;
 using Unity.Mathematics;
 using UnityEngine;
 

@@ -8,8 +8,8 @@
         "Unity.Mathematics",
         "JamUp.UnityUtility.Scripts",
         "pbuddy.TestUtility.EditorScripts",
-        "JamUp.Waves.Scripts",
-        "JamUp.FFT.Scripts"
+        "JamUp.FFT.Scripts",
+        "JamUp.Waves.RuntimeScripts"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
