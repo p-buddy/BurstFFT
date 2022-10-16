@@ -2,8 +2,8 @@
     "name": "JamUp.UnityUtility.Editor",
     "rootNamespace": "JamUp.UnityUtility.Editor",
     "references": [
-        "GUID:0d1987cca3ae04ca3bc2da4fa5c7d026",
-        "GUID:d8b63aba1907145bea998dd612889d6b"
+        "pbuddy.StringUtility.RuntimeScripts",
+        "Unity.Mathematics"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

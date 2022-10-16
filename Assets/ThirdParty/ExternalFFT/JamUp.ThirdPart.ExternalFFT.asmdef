@@ -2,7 +2,7 @@
     "name": "JamUp.ThirdPart.ExternalFFT",
     "rootNamespace": "",
     "references": [
-        "GUID:a6821e6b7f5ef405dbcf2010e96418ca"
+        "JamUp.FFT.Scripts"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

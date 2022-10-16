@@ -2,11 +2,11 @@
     "name": "JamUp.UnityUtility.EditModeTests",
     "rootNamespace": "",
     "references": [
-        "GUID:27619889b8ba8c24980f49ee34dbb44a",
-        "GUID:0acc523941302664db1f4e527237feb3",
-        "GUID:92b2a5012985c440c8c254836b5725e7",
-        "GUID:ee4546efc75f643bcb1e8d1254244296",
-        "GUID:d8b63aba1907145bea998dd612889d6b"
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "JamUp.UnityUtility.Scripts",
+        "JamUp.UnityUtility.Editor",
+        "Unity.Mathematics"
     ],
     "includePlatforms": [
         "Editor"

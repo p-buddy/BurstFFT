@@ -2,15 +2,14 @@
     "name": "JamUp.Waves.Scripts",
     "rootNamespace": "",
     "references": [
-        "GUID:d8b63aba1907145bea998dd612889d6b",
-        "GUID:2665a8d13d1b3f18800f46e256720795",
-        "GUID:0d1987cca3ae04ca3bc2da4fa5c7d026",
-        "GUID:c96019035741a44539895c07e01c0d76",
-        "GUID:92b2a5012985c440c8c254836b5725e7",
-        "GUID:b6f7367fe23ba44f8a6b736ff2deb9df",
-        "GUID:c92f15fe9eef418ca032107c6ad6f9c5",
-        "GUID:734d92eba21c94caba915361bd5ac177",
-        "GUID:e0cd26848372d4e5c891c569017e11f1"
+        "Unity.Mathematics",
+        "Unity.Burst",
+        "pbuddy.StringUtility.RuntimeScripts",
+        "JamUp.Math.Scripts",
+        "JamUp.UnityUtility.Scripts",
+        "pbuddy.TypeScriptingUtility.RuntimeScripts",
+        "Unity.Entities",
+        "Unity.Collections"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
