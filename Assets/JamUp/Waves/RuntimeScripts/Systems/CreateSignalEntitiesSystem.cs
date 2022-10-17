@@ -43,34 +43,6 @@ namespace JamUp.Waves.RuntimeScripts
 
             beginEcbSystem = World.GetOrCreateSystem<BeginSimulationEntityCommandBufferSystem>();
             drawerSystem = World.GetOrCreateSystem<SignalDrawerSystem>();
-            
-            Signal signal = new Signal(100f);
-            signal.AddFrame(new KeyFrame(2f, 1000, ProjectionType.Perspective, 0.1f, new []
-            {
-                new WaveState(1f, 1f, 0f, WaveType.Sine, new Vector(1f, 0f, 0f)),
-                new WaveState(1f, 1f, 90f, WaveType.Sine, new Vector(0f, 1f, 0f))
-            }, 2));
-            
-            signal.AddFrame(new KeyFrame(2, 1000, ProjectionType.Perspective, 0.1f, new []
-            {
-                new WaveState(1f, 1f, 0f, WaveType.Sine, new Vector(1f, 0f, 0f)),
-                new WaveState(2f, 1f, 90f, WaveType.Sine, new Vector(0f, 1f, 0f))
-            }, 1f));
-            
-            signal.AddFrame(new KeyFrame(2, 1000, ProjectionType.Perspective, 0.1f, new []
-            {
-                new WaveState(1f, 1f, 0f, WaveType.Sine, new Vector(1f, 0f, 0f)),
-                new WaveState(2f, 1f, 90f, WaveType.Sine, new Vector(0f, 1f, 0f)),
-                new WaveState(1f, 1f, 0f, WaveType.Square, new Vector(0f, 1f, 0f))
-            }, 2));
-            
-            signal.AddFrame(new KeyFrame(2, 1000, ProjectionType.Perspective, 0.1f, new []
-            {
-                new WaveState(1f, 1f, 0f, WaveType.Sine, new Vector(1f, 0f, 0f)),
-                new WaveState(1f, 1f, 90f, WaveType.Sine, new Vector(0f, 1f, 0f)),
-                new WaveState(1f, 1f, 90f, WaveType.Sawtooth, new Vector(0f, 1f, 0f))
-            }, 2));
-            EnqueueSignal(in signal);
         }
         
 

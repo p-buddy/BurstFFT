@@ -10,7 +10,7 @@ using UnityEngine;
 
 public partial class LocalCodeRunnerSystem : SystemBase
 {
-    private readonly string baseDirectory = GetFolderInHome("WavyNthLocal");
+    private static readonly string BaseDirectory = GetFolderInHome("WavyNthLocal");
     
     private const string JavascriptExecutableFileName = "bundle.js";
 
@@ -18,42 +18,55 @@ public partial class LocalCodeRunnerSystem : SystemBase
 
     private FileSystemWatcher watcher;
 
+    private readonly API api = new ();
+    private readonly string codeFile = Path.Combine(BaseDirectory, JavascriptExecutableFileName);
+
+    private bool doRun = true;
     protected override void OnCreate()
     {
         base.OnCreate();
 
-        if (!Directory.Exists(baseDirectory)) throw new Exception($"{baseDirectory} folder not found");
+        if (!Directory.Exists(BaseDirectory)) throw new Exception($"{BaseDirectory} folder not found");
 
-        string apiFile = Path.Combine(baseDirectory, TypescriptAPIOutputFileName);
+        string apiFile = Path.Combine(BaseDirectory, TypescriptAPIOutputFileName);
 
-        API api = new();
         File.WriteAllText(apiFile, api.Generate());
 
-        string watchFile = Path.Combine(baseDirectory, JavascriptExecutableFileName);
-        watcher = new FileSystemWatcher(baseDirectory);
+        watcher = new FileSystemWatcher(BaseDirectory);
 
+        watcher.Filter = $"{JavascriptExecutableFileName}*";
+        
+        watcher.NotifyFilter = NotifyFilters.Attributes
+                               | NotifyFilters.CreationTime
+                               | NotifyFilters.DirectoryName
+                               | NotifyFilters.FileName
+                               | NotifyFilters.LastAccess
+                               | NotifyFilters.LastWrite
+                               | NotifyFilters.Security
+                               | NotifyFilters.Size;
+        
         watcher.Changed += (_, e) =>
         {
-            if (e.ChangeType != WatcherChangeTypes.Changed || e.FullPath != watchFile) return;
-            JsRunner.ExecuteFile(watchFile, context => context.ApplyAPI(api));
+            if (e.Name.Contains("map")) return;
+            doRun = true;
         };
-
-        watcher.Created += (_, e) =>
-        {
-            if (e.FullPath != watchFile) return;
-            JsRunner.ExecuteFile(watchFile, context => context.ApplyAPI(api));
-        };
+        
+        watcher.EnableRaisingEvents = true;
+    }
+    
+    protected override void OnUpdate()
+    {
+        if (!doRun) return;
+        JsRunner.ExecuteFile(codeFile, context => context.ApplyAPI(api));
+        doRun = false;
     }
 
     protected override void OnDestroy()
     {
         base.OnDestroy();
-        
         watcher?.Dispose();
     }
 
     private static string GetFolderInHome(string folderName) =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), folderName);
-
-    protected override void OnUpdate() { }
 }
