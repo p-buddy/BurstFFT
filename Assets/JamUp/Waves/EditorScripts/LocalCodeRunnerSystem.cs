@@ -1,11 +1,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using JamUp.Waves.RuntimeScripts.API;
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
 using Unity.Entities;
-using UnityEngine;
+using UnityEngine.Profiling;
+using Debug = UnityEngine.Debug;
 
 
 public partial class LocalCodeRunnerSystem : SystemBase
@@ -53,11 +55,16 @@ public partial class LocalCodeRunnerSystem : SystemBase
         
         watcher.EnableRaisingEvents = true;
     }
+
     
     protected override void OnUpdate()
     {
         if (!doRun) return;
+        Stopwatch watch = new Stopwatch();
+        watch.Start();
         JsRunner.ExecuteFile(codeFile, context => context.ApplyAPI(api));
+        watch.Stop();
+        Debug.Log(watch.ElapsedMilliseconds);
         doRun = false;
     }
 
