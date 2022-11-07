@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Mathematics;
 
 namespace JamUp.Waves.RuntimeScripts
 {
@@ -8,6 +9,6 @@ namespace JamUp.Waves.RuntimeScripts
 
         public float EndTime;
         public bool UpdateRequired(float time, float padding) => time + padding >= EndTime;
-        public float Interpolant(float now) => (now - StartTime) / (EndTime - StartTime) ;
+        public float Interpolate(float now) => math.min((now - StartTime) / (EndTime - StartTime), 1f) ;
     }
 }

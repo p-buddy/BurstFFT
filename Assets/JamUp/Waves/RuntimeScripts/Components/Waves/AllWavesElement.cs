@@ -1,6 +1,7 @@
 using JamUp.Waves.RuntimeScripts.API;
 using Unity.Entities;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace JamUp.Waves.RuntimeScripts
 {

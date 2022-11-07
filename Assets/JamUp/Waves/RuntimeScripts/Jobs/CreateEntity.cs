@@ -8,12 +8,14 @@ using UnityEngine;
 
 namespace JamUp.Waves.RuntimeScripts
 {
+    #if MULTITHREADED
     [BurstCompile]
+    #endif
     public struct CreateEntity : IJob
     {
         public const int MaxWaveCount = 10;
-        private const float AttackTime = 0.1f;
-        private const float ReleaseTime = 0.01f;
+        private const float AttackTime = 0.5f;
+        private const float ReleaseTime = 0.1f;
 
         [ReadOnly] public NativeArray<Entity> ExistingEntities;
 
@@ -56,14 +58,15 @@ namespace JamUp.Waves.RuntimeScripts
         {
             useExisting = Index < ExistingEntities.Length;
             entity = useExisting ? ExistingEntities[Index] : ECB.CreateEntity(EntityArchetype);
-            interpolant = useExisting ? TimeFrames[Index].Interpolant(TimeNow) : 0f;
+            interpolant = useExisting ? TimeFrames[Index].Interpolate(TimeNow) : 0f;
 
             if (useExisting)
             {
                 ECB.RemoveComponent<UpdateRequired>(entity);
                 NativeArray<CurrentWavesElement> currentWaves = WavesForEntity[entity].AsNativeArray();
                 NativeArray<CurrentWaveAxes> currentWaveAxes = AxesForEntity[entity].AsNativeArray();
-
+                ECB.SetBuffer<AllWavesElement>(entity);
+                
                 for (int i = 0; i < currentWaves.Length; i++)
                 {
                     AllWavesElement lerp = AllWavesElement.FromLerp(interpolant, currentWaves[i], currentWaveAxes[i]);
@@ -76,6 +79,8 @@ namespace JamUp.Waves.RuntimeScripts
                 Init<CurrentWaveAxes>(MaxWaveCount);
                 ECB.SetComponent(entity, PropertyBlocks[Index - ExistingEntities.Length]);
             }
+            
+            ECB.SetComponent<CurrentTimeFrame>(entity, default);
 
             int frameCount = PackedFrames.Length;
             int elementsToAdd = frameCount + 2; // all frames, plus 'sustain' and 'release'
@@ -133,7 +138,7 @@ namespace JamUp.Waves.RuntimeScripts
             ECB.SetBuffer<TBufferElement>(entity).EnsureCapacity(capacity);
             return new BufferHelper<TBufferElement>
             {
-                CBfE = new()
+                CB4E = new()
                 {
                     Entity = entity,
                     CommandBuffer = ECB,
@@ -206,8 +211,8 @@ namespace JamUp.Waves.RuntimeScripts
 
         private struct BufferHelper<TBufferElement> where TBufferElement : struct, IBufferElementData
         {
-            public CommandBufferForEntity CBfE;
-            public void Append(TBufferElement element) => CBfE.Append(element);
+            public CommandBufferForEntity CB4E;
+            public void Append(TBufferElement element) => CB4E.Append(element);
         }
     }
 }

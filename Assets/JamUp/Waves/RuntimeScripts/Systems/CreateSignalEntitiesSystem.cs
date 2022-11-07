@@ -174,7 +174,6 @@ namespace JamUp.Waves.RuntimeScripts
             componentsForJob.Dispose(Dependency);
 
             signals.Clear();
-            GC.Collect();
         }
 
         private (NativeArray<CreateEntity.PackedFrame>, NativeArray<Animatable<WaveState>>) CreateSignalEntity(in Signal signal)
