@@ -182,14 +182,6 @@ namespace JamUp.Waves.RuntimeScripts
                 }
                 : _default;
 
-        private class AssociatedBufferElement : Attribute
-        {
-            public AssociatedBufferElement(Type type)
-            {
-                
-            }
-        }
-        
         [BurstCompile]
         public struct PackedFrame
         {
@@ -220,22 +212,6 @@ namespace JamUp.Waves.RuntimeScripts
                 SignalLength = frame.SignalLength,
                 Thickness = frame.Thickness
             };
-
-            public TBufferElement GetBufferElement<TBufferElement>()
-                where TBufferElement : struct, IBufferElementData, IAnimatableSettable, IValueSettable<float>
-            {
-                Animatable<float> value = typeof(TBufferElement) == typeof(ProjectionElement)
-                    ? ProjectionType
-                    : typeof(TBufferElement) == typeof(SampleRateElement)
-                        ? SampleRate
-                        : typeof(TBufferElement) == typeof(SignalLengthElement)
-                            ? SignalLength
-                            : typeof(TBufferElement) == typeof(ThicknessElement)
-                                ? Thickness
-                                : throw new Exception();
-                
-                return ToBufferElement<TBufferElement>(value);
-            }
         };
 
         private readonly struct EntityHandle

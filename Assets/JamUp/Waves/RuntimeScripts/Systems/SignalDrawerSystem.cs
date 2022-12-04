@@ -70,6 +70,7 @@ namespace JamUp.Waves.RuntimeScripts
         protected override void OnUpdate()
         {
             Draw();
+            //LogPropertyBlocks();
             
             var ecb = endSimulationEcbSystem.CreateCommandBuffer().AsParallelWriter();
             JobHandle updatesHandle = EnqueueUpdates(Dependency, ecb);
@@ -89,11 +90,6 @@ namespace JamUp.Waves.RuntimeScripts
             
             Dependency = Cleanup(JobHandle.CombineDependencies(vertexHandle, setWavesAndPropertiesHandle), ecb);
             endSimulationEcbSystem.AddJobHandleForProducer(Dependency);
-
-            foreach (MaterialPropertyBlock block in propertyBlocks)
-            {
-                Debug.Log(block.ReadoutAll());
-            }
         }
 
         private void Draw()
@@ -108,6 +104,15 @@ namespace JamUp.Waves.RuntimeScripts
                         Graphics.DrawProcedural(material, bounds, topology, count, 0, null, propertyBlock, shadow);
                     })
                     .Run();
+        }
+
+        private void LogPropertyBlocks()
+        {
+            for (var index = 0; index < propertyBlocks.Count; index++)
+            {
+                MaterialPropertyBlock block = propertyBlocks[index];
+                Debug.Log($"Property Block {index}:\n{block.ReadoutAll()}");
+            }
         }
 
         private JobHandle EnqueueUpdates(JobHandle dependency, EntityCommandBuffer.ParallelWriter ecb)
