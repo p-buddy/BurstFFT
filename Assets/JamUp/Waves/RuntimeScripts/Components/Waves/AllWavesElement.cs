@@ -23,15 +23,15 @@ namespace JamUp.Waves.RuntimeScripts
         public static float3x2 PackAxes(AllWavesElement first, AllWavesElement second)
             => new (first.DisplacementAxis, second.DisplacementAxis);
 
-        public AllWavesElement Default
-        {
-            get
+        public AllWavesElement Default => new()
             {
-                AnimationCurve = AnimationCurve.Linear;
-                Amplitude = 0f;
-                return this;
-            }
-        }
+                Frequency = Frequency,
+                Amplitude = 0f,
+                WaveTypeRatio = WaveTypeRatio,
+                Phase = Phase,
+                DisplacementAxis = DisplacementAxis,
+                AnimationCurve = AnimationCurve.Linear
+            };
 
         public static AllWavesElement FromLerp(float lerpTime, CurrentWavesElement wave, CurrentWaveAxes axis, AnimationCurve curve = default)
         {

@@ -9,6 +9,7 @@
     }
   ],
   "dependencies": {
+    "com.unity.audio.dspgraph": "0.1.0-preview.22",
     "com.unity.burst": "1.6.6",
     "com.unity.code-analysis": "0.1.2-preview",
     "com.unity.entities": "0.51.1-preview.21",

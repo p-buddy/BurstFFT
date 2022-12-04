@@ -1,20 +1,22 @@
+using System;
 using JamUp.Waves.RuntimeScripts.API;
+using JamUp.Waves.RuntimeScripts.BufferIndexing;
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
 using UnityEngine;
 
 namespace JamUp.Waves.RuntimeScripts
 {
-    #if MULTITHREADED
+
     [BurstCompile]
-    #endif
     public struct CreateEntity : IJob
     {
         public const int MaxWaveCount = 10;
-        private const float AttackTime = 0.5f;
+        private const float AttackTime = 2f;
         private const float ReleaseTime = 0.1f;
 
         [ReadOnly] public NativeArray<Entity> ExistingEntities;
@@ -49,60 +51,35 @@ namespace JamUp.Waves.RuntimeScripts
         [ReadOnly] 
         public BufferFromEntity<CurrentWaveAxes> AxesForEntity;
 
-        // Assigned in Execute
-        private bool useExisting;
-        private Entity entity;
-        private float interpolant;
-
         public void Execute()
         {
-            useExisting = Index < ExistingEntities.Length;
-            entity = useExisting ? ExistingEntities[Index] : ECB.CreateEntity(EntityArchetype);
-            interpolant = useExisting ? TimeFrames[Index].Interpolate(TimeNow) : 0f;
-
-            if (useExisting)
-            {
-                ECB.RemoveComponent<UpdateRequired>(entity);
-                NativeArray<CurrentWavesElement> currentWaves = WavesForEntity[entity].AsNativeArray();
-                NativeArray<CurrentWaveAxes> currentWaveAxes = AxesForEntity[entity].AsNativeArray();
-                ECB.SetBuffer<AllWavesElement>(entity);
-                
-                for (int i = 0; i < currentWaves.Length; i++)
-                {
-                    AllWavesElement lerp = AllWavesElement.FromLerp(interpolant, currentWaves[i], currentWaveAxes[i]);
-                    ECB.AppendToBuffer(entity, lerp);
-                }
-            }
-            else
-            {
-                Init<CurrentWavesElement>(MaxWaveCount);
-                Init<CurrentWaveAxes>(MaxWaveCount);
-                ECB.SetComponent(entity, PropertyBlocks[Index - ExistingEntities.Length]);
-            }
+            EntityHandle entityHandle = new (Index, ExistingEntities, ECB, EntityArchetype, TimeNow, TimeFrames);
+            InitializeEntity(in entityHandle);
             
-            ECB.SetComponent<CurrentTimeFrame>(entity, default);
+            ECB.SetComponent(entityHandle.Entity, CurrentIndex.Invalid());
+            ECB.SetComponent<CurrentTimeFrame>(entityHandle.Entity, default);
+            ECB.SetComponent<CurrentWaveIndex>(entityHandle.Entity, default);
 
             int frameCount = PackedFrames.Length;
             int elementsToAdd = frameCount + 2; // all frames, plus 'sustain' and 'release'
             int capacity = 1 + elementsToAdd; // prepend one frame for 'attack'
-
-            Init<DurationElement>(capacity).Append(new DurationElement(AttackTime));
-            Init<WaveCountElement>(capacity).Append(new WaveCountElement
+            
+            ECB.SetComponent(entityHandle.Entity, new LastIndex(capacity - 1));
+            
+            Init<DurationElement>(capacity, in entityHandle).Append(new DurationElement(AttackTime));
+            Init<WaveCountElement>(capacity, in entityHandle).Append(new WaveCountElement
             {
-                Value = useExisting ? WaveCounts[Index].Value : 0
+                Value = entityHandle.UseExisting ? WaveCounts[Index].Value : 0
             });
 
-            Init<ProjectionElement>(capacity).Append(First<ProjectionElement, CurrentProjection>(ProjectionForEntity));
-            Init<SignalLengthElement>(capacity).Append(First<SignalLengthElement, CurrentSignalLength>(SignalLengthForEntity));
-            Init<SampleRateElement>(capacity).Append(First<SampleRateElement, CurrentSampleRate>(SampleRateForEntity));
-            Init<ThicknessElement>(capacity).Append(First<ThicknessElement, CurrentThickness>(ThicknessForEntity));
+            SetBuffersWithInitialElements(capacity, in entityHandle);
 
             CommandBufferForEntity entityCommandBuffer = new()
             {
                 CommandBuffer = ECB,
-                Entity = entity
+                Entity = entityHandle.Entity
             };
-
+            
             int accumulatedWaveCounts = 0;
             for (int index = 0; index < elementsToAdd; index++)
             {
@@ -132,9 +109,57 @@ namespace JamUp.Waves.RuntimeScripts
             }
         }
 
-        private BufferHelper<TBufferElement> Init<TBufferElement>(int capacity)
+        private void InitializeEntity(in EntityHandle handle)
+        {
+            var entity = handle.Entity;
+            
+            if (!handle.UseExisting)
+            {
+                Init<CurrentWavesElement>(MaxWaveCount, in handle);
+                Init<CurrentWaveAxes>(MaxWaveCount, in handle);
+                ECB.SetComponent(entity, PropertyBlocks[Index - ExistingEntities.Length]);
+                return;
+            }
+            
+            ECB.RemoveComponent<UpdateRequired>(entity);
+            NativeArray<CurrentWavesElement> currentWaves = WavesForEntity[entity].AsNativeArray();
+            NativeArray<CurrentWaveAxes> currentWaveAxes = AxesForEntity[entity].AsNativeArray();
+
+            ECB.SetBuffer<AllWavesElement>(entity);
+            
+            for (int i = 0; i < currentWaves.Length; i++)
+            {
+                AllWavesElement lerp = AllWavesElement.FromLerp(handle.Interpolant, currentWaves[i], currentWaveAxes[i]);
+                ECB.AppendToBuffer(entity, lerp);
+            }
+        }
+
+        private void SetBuffersWithInitialElements(int capacity, in EntityHandle entityHandle)
+        {
+            PackedFrame firstFrame = PackedFrames[0];
+            ProjectionElement projection = ToBufferElement<ProjectionElement>(firstFrame.ProjectionType);
+            ProjectionElement signalLength = ToBufferElement<ProjectionElement>(firstFrame.SignalLength);
+            ProjectionElement sampleRate = ToBufferElement<ProjectionElement>(firstFrame.SampleRate);
+            ProjectionElement thickness = ToBufferElement<ProjectionElement>(firstFrame.Thickness);
+            
+            InitWithFirstElement(capacity, ProjectionForEntity, in entityHandle, projection);
+            InitWithFirstElement(capacity, SignalLengthForEntity, in entityHandle, signalLength);
+            InitWithFirstElement(capacity, SampleRateForEntity, in entityHandle, sampleRate);
+            InitWithFirstElement(capacity, ThicknessForEntity, in entityHandle, thickness);
+        }
+
+        private void InitWithFirstElement<TBufferElement, TCurrentElement>(int capacity,
+                                                                           NativeArray<TCurrentElement> elements,
+                                                                           in EntityHandle handle,
+                                                                           TBufferElement initialElement)
+            where TBufferElement : struct, IBufferElementData, IValueSettable<float>, IAnimatableSettable 
+            where TCurrentElement : struct, IComponentData, IValuable<Animation<float>> 
+            => Init<TBufferElement>(capacity, in handle).Append(First(elements, in handle, initialElement));
+        
+        private BufferHelper<TBufferElement> Init<TBufferElement>(int capacity, in EntityHandle handle)
             where TBufferElement : struct, IBufferElementData
         {
+            var entity = handle.Entity;
             ECB.SetBuffer<TBufferElement>(entity).EnsureCapacity(capacity);
             return new BufferHelper<TBufferElement>
             {
@@ -146,22 +171,31 @@ namespace JamUp.Waves.RuntimeScripts
             };
         }
 
-        private TBufferElement First<TBufferElement, TComponent>(NativeArray<TComponent> dataFromEntity)
+        private TBufferElement First<TBufferElement, TComponent>(NativeArray<TComponent> dataFromEntity, in EntityHandle handle, TBufferElement _default)
             where TBufferElement : struct, IBufferElementData, IValueSettable<float>, IAnimatableSettable
-            where TComponent : struct, IComponentData, IValuable<Animation<float>>
+            where TComponent : struct, IComponentData, IValuable<Animation<float>> 
+            => handle.UseExisting
+                ? new TBufferElement
+                {
+                    Value = dataFromEntity[Index].Value.Lerp(handle.Interpolant),
+                    AnimationCurve = AnimationCurve.Linear
+                }
+                : _default;
+
+        private class AssociatedBufferElement : Attribute
         {
-            float value = useExisting ? dataFromEntity[Index].Value.Lerp(interpolant) : default;
-            return new TBufferElement
+            public AssociatedBufferElement(Type type)
             {
-                Value = value,
-                AnimationCurve = AnimationCurve.Linear
-            };
+                
+            }
         }
         
+        [BurstCompile]
         public struct PackedFrame
         {
             public float Duration;
             public int WaveCount;
+            
             public Animatable<float> ProjectionType;
             public Animatable<float> SampleRate;
             public Animatable<float> SignalLength;
@@ -186,7 +220,46 @@ namespace JamUp.Waves.RuntimeScripts
                 SignalLength = frame.SignalLength,
                 Thickness = frame.Thickness
             };
+
+            public TBufferElement GetBufferElement<TBufferElement>()
+                where TBufferElement : struct, IBufferElementData, IAnimatableSettable, IValueSettable<float>
+            {
+                Animatable<float> value = typeof(TBufferElement) == typeof(ProjectionElement)
+                    ? ProjectionType
+                    : typeof(TBufferElement) == typeof(SampleRateElement)
+                        ? SampleRate
+                        : typeof(TBufferElement) == typeof(SignalLengthElement)
+                            ? SignalLength
+                            : typeof(TBufferElement) == typeof(ThicknessElement)
+                                ? Thickness
+                                : throw new Exception();
+                
+                return ToBufferElement<TBufferElement>(value);
+            }
         };
+
+        private readonly struct EntityHandle
+        {
+            public bool UseExisting { get; }
+            public Entity Entity { get; }
+            public float Interpolant { get; }
+            
+            public EntityHandle(int index,
+                                NativeArray<Entity> existingEntities,
+                                EntityCommandBuffer ecb,
+                                EntityArchetype archetype,
+                                float timeNow,
+                                NativeArray<CurrentTimeFrame> timeFrames)
+            {
+                UseExisting = index < existingEntities.Length;
+                Entity = UseExisting ? existingEntities[index] : ecb.CreateEntity(archetype);
+                Interpolant = UseExisting ? timeFrames[index].Interpolate(timeNow) : 0f;
+            }
+        }
+
+        private static TBufferElement ToBufferElement<TBufferElement>(Animatable<float> property)
+            where TBufferElement : struct, IBufferElementData, IAnimatableSettable, IValueSettable<float>
+            => new() { Value = property.Value, AnimationCurve = property.AnimationCurve };
         
         private struct CommandBufferForEntity
         {
@@ -197,7 +270,7 @@ namespace JamUp.Waves.RuntimeScripts
 
             public void AppendAnimationElement<TBufferElement>(Animatable<float> property)
                 where TBufferElement : struct, IBufferElementData, IAnimatableSettable, IValueSettable<float> 
-                => Append(new TBufferElement { Value = property.Value, AnimationCurve = property.AnimationCurve });
+                => Append(ToBufferElement<TBufferElement>(property));
 
             public void AppendWaveElements(NativeArray<Animatable<WaveState>> waves, int offset, int count)
             {
@@ -208,7 +281,7 @@ namespace JamUp.Waves.RuntimeScripts
                 }
             }
         }
-
+        
         private struct BufferHelper<TBufferElement> where TBufferElement : struct, IBufferElementData
         {
             public CommandBufferForEntity CB4E;

@@ -15,7 +15,7 @@ float GetValueAtTime(in Wave wave, in float time)
     const float sineFactor = wave.Amplitude * sineValue;
     const float squareFactor = wave.Amplitude * sign(sineValue);
     const float triangleFactor = wave.Amplitude * TwoOverPI * asin(sineValue);
-    const float sawToothFactor = wave.Amplitude * -TwoOverPI * atan(1.0f / tan((rotationAmount - PIOverTwo) / 2 - TwoOverPI));
+    const float sawToothFactor = wave.Amplitude * -TwoOverPI * atan(1.0f / tan(0.5f * (rotationAmount - PIOverTwo) - PI / 4));
     
     return dot(wave.WaveTypeRatio, float4(sineFactor, squareFactor, triangleFactor, sawToothFactor));
 }

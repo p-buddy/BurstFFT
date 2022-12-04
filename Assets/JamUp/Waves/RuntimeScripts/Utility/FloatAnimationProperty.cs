@@ -1,3 +1,4 @@
+using JamUp.Waves.RuntimeScripts.BufferIndexing;
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
 using Unity.Entities;
 using Unity.Jobs;
@@ -32,16 +33,16 @@ namespace JamUp.Waves.RuntimeScripts
             }
 
             public JobHandle Update(SetCurrentAnimationValue<TComponent, TBuffer> job,
-                                    ComponentSystemBase system,
-                                    JobHandle dependency)
+                                    in FloatAnimationProperties.UpdateInputs inputs)
             {
-                job.BufferHandle = BufferHandle(system, false);
-                job.CurrentHandle = ComponentHandle(system, false);
+                job.BufferHandle = BufferHandle(inputs.System, true);
+                job.CurrentHandle = ComponentHandle(inputs.System, false);
+                job.IndexHandle = inputs.CurrentIndexHandle;
 #if MULTITHREADED
-                return job.ScheduleParallel(UpdateCurrentQuery, dependency);
+                return job.ScheduleParallel(UpdateCurrentQuery, inputs.Dependency);
 #else
                 job.Run(UpdateCurrentQuery);
-                return dependency;
+                return inputs.Dependency;
 #endif
             }
 

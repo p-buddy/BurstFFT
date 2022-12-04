@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using JamUp.UnityUtility;
+using JamUp.Waves.RuntimeScripts.BufferIndexing;
 using Unity.Assertions;
 using Unity.Collections;
 using Unity.Entities;
@@ -88,6 +89,11 @@ namespace JamUp.Waves.RuntimeScripts
             
             Dependency = Cleanup(JobHandle.CombineDependencies(vertexHandle, setWavesAndPropertiesHandle), ecb);
             endSimulationEcbSystem.AddJobHandleForProducer(Dependency);
+
+            foreach (MaterialPropertyBlock block in propertyBlocks)
+            {
+                Debug.Log(block.ReadoutAll());
+            }
         }
 
         private void Draw()
@@ -109,28 +115,41 @@ namespace JamUp.Waves.RuntimeScripts
             float time = UnityEngine.Time.timeSinceLevelLoad;
             float delta = Time.DeltaTime;
             
-            return Entities.WithNone<UpdateRequired>()
-                           .WithName("EnqueueUpdates")
-                           .WithAll<SignalEntity>()
-                           .ForEach((Entity entity,
-                                     int entityInQueryIndex,
-                                     ref CurrentTimeFrame current,
-                                     ref DynamicBuffer<DurationElement> elements) =>
-                           {
-                               if (!current.UpdateRequired(time, delta)) return;
+#if MULTITHREADED
+            JobHandle handle = Entities.WithNone<UpdateRequired>()
+#else
+            JobHandle handle = dependency.CompleteAndGetBack();
+            Entities.WithNone<UpdateRequired>()
+#endif
+                    .WithName("EnqueueUpdates")
+                    .WithAll<SignalEntity>()
+                    .ForEach((Entity entity,
+                              int entityInQueryIndex,
+                              ref CurrentIndex index,
+                              ref CurrentTimeFrame current,
+                              in DynamicBuffer<DurationElement> elements, 
+                              in LastIndex last) =>
+                    {
+                        if (index.Value >= 0 && !current.UpdateRequired(time, delta)) return;
                                
-                               if (elements.Length == 1)
-                               {
-                                   ecb.DestroyEntity(entityInQueryIndex, entity);
-                                   return;
-                               }
-                               
-                               DurationElement duration = elements[0];
-                               current.StartTime = time;
-                               current.EndTime = time + duration;
-                               elements.RemoveAt(0);
-                               ecb.AddComponent<UpdateRequired>(entityInQueryIndex, entity);
-                           }).ScheduleParallel(dependency);
+                        if (index.IsLast(in last))
+                        {
+                            ecb.DestroyEntity(entityInQueryIndex, entity);
+                            return;
+                        }
+                        
+                        index.Increment();
+                        DurationElement duration = elements[index.Value];
+                        current.StartTime = time;
+                        current.EndTime = time + duration.Value;
+                        ecb.AddComponent<UpdateRequired>(entityInQueryIndex, entity);
+                    })
+#if MULTITHREADED
+                    .ScheduleParallel(dependency);
+#else
+                    .Run();
+#endif
+            return handle;
         }
 
         private JobHandle UpdateWaves(JobHandle dependency)
@@ -144,23 +163,24 @@ namespace JamUp.Waves.RuntimeScripts
                     .WithName("UpdateWaves")
                     .WithAll<SignalEntity>()
                     .ForEach((ref CurrentWaveCount currentWaveCount,
-                              ref DynamicBuffer<WaveCountElement> waveCounts,
-                              ref DynamicBuffer<AllWavesElement> allWaves,
                               ref DynamicBuffer<CurrentWavesElement> currentWaves, 
-                              ref DynamicBuffer<CurrentWaveAxes> currentAxes) =>
+                              ref DynamicBuffer<CurrentWaveAxes> currentAxes,
+                              ref CurrentWaveIndex waveIndex,
+                              in DynamicBuffer<WaveCountElement> waveCounts,
+                              in DynamicBuffer<AllWavesElement> allWaves,
+                              in CurrentIndex index) =>
                     {
-                        int startingWaveCount = waveCounts[0].Value;
-                        int endingWaveCount = waveCounts[1].Value;
+                        int startingWaveCount = waveCounts[index.Value].Value;
+                        int endingWaveCount = waveCounts[index.Value + 1].Value;
                         int waveCount = math.max(startingWaveCount, endingWaveCount);
+
                         currentWaves.ResizeUninitialized(waveCount);
                         currentAxes.ResizeUninitialized(waveCount);
 
-                        currentWaveCount.Value = waveCount;
-
                         for (int i = 0; i < waveCount; i++)
                         {
-                            int startIndex = i;
-                            int endIndex = startingWaveCount + i;
+                            int startIndex = waveIndex.Value + i;
+                            int endIndex = waveIndex.Value + startingWaveCount + i;
                                    
                             AllWavesElement startingWave = i >= startingWaveCount
                                 ? allWaves[endIndex].Default
@@ -174,15 +194,15 @@ namespace JamUp.Waves.RuntimeScripts
                             {
                                 Value = AllWavesElement.PackSettings(startingWave, endingWave)
                             };
-
+                            
                             currentAxes[i] = new CurrentWaveAxes
                             {
                                 Value = AllWavesElement.PackAxes(startingWave, endingWave)
                             };
                         }
-                               
-                        waveCounts.RemoveAt(0);
-                        allWaves.RemoveRange(0, startingWaveCount);
+
+                        currentWaveCount.Value = waveCount;
+                        waveIndex.IncrementBy(startingWaveCount);
                     })
 #if MULTITHREADED
                     .ScheduleParallel(dependency);
@@ -244,21 +264,30 @@ namespace JamUp.Waves.RuntimeScripts
 
         private JobHandle UpdateVertexCount(JobHandle dependency)
         {
-            return Entities.WithAll<UpdateRequired>()
-                           .WithName("UpdateVertexCount")
-                           .WithAll<SignalEntity>()
-                           .ForEach((ref VertexCount count,
-                                     in CurrentSignalLength currentSignalLength,
-                                     in CurrentSampleRate currentSampleRate) =>
-                           {
-                               Animation<float> signal = currentSignalLength.Value;
-                               Animation<float> sample = currentSampleRate.Value;
-                               float maxSignalTime = math.max(signal.From, signal.To);
-                               float maxSampleRate = math.max(sample.From, sample.To);
-                               count.Value = 24 * (int)(maxSignalTime / (1f / maxSampleRate));
-                           })
-                           .ScheduleParallel(dependency);
-        }
+#if MULTITHREADED
+            JobHandle handle = Entities.WithAll<UpdateRequired>()
+#else
+            JobHandle handle = dependency.CompleteAndGetBack();
+            Entities.WithAll<UpdateRequired>()
+#endif
+                    .WithName("UpdateVertexCount")
+                    .WithAll<SignalEntity>()
+                    .ForEach((ref VertexCount count,
+                              in CurrentSignalLength currentSignalLength,
+                              in CurrentSampleRate currentSampleRate) =>
+                    {
+                        Animation<float> signal = currentSignalLength.Value;
+                        Animation<float> sample = currentSampleRate.Value;
+                        float maxSignalTime = math.max(signal.From, signal.To);
+                        float maxSampleRate = math.max(sample.From, sample.To);
+                        count.Value = 24 * (int)(maxSignalTime / (1f / maxSampleRate));
+                    })
+#if MULTITHREADED
+                    .ScheduleParallel(dependency);
+#else
+                    .Run();
+#endif
+            return handle;        }
 
         private JobHandle Cleanup(JobHandle dependency, EntityCommandBuffer.ParallelWriter ecb)
         {

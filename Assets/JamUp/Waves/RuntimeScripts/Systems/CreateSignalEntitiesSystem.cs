@@ -128,7 +128,7 @@ namespace JamUp.Waves.RuntimeScripts
                 EntityCommandBuffer ecb = beginEcbSystem.CreateCommandBuffer();
                 
                 Signal signal = signals[index];
-                var (frames, waves) = CreateSignalEntity(in signal);
+                var signalData = ExtractDataFromSignal(in signal);
                 
 #if MULTITHREADED
                 JobHandle handle = new CreateEntity
@@ -137,8 +137,8 @@ namespace JamUp.Waves.RuntimeScripts
                 new CreateEntity
 #endif
                 {
-                    PackedFrames = frames,
-                    Waves = waves,
+                    PackedFrames = signalData.FrameData,
+                    Waves = signalData.WaveData,
                     ExistingEntities = archetypeEntities,
                     Index = index,
                     ECB = ecb,
@@ -159,8 +159,7 @@ namespace JamUp.Waves.RuntimeScripts
 #else
                     .Run();
 #endif
-                frames.Dispose(handle);
-                waves.Dispose(handle);
+                signalData.Dispose();
 
                 handles[index] = handle;
             }
@@ -176,7 +175,26 @@ namespace JamUp.Waves.RuntimeScripts
             signals.Clear();
         }
 
-        private (NativeArray<CreateEntity.PackedFrame>, NativeArray<Animatable<WaveState>>) CreateSignalEntity(in Signal signal)
+        private readonly struct BlittableSignalData: IDisposable
+        {
+            public NativeArray<CreateEntity.PackedFrame> FrameData { get; }
+            public NativeArray<Animatable<WaveState>> WaveData { get; }
+            
+            public BlittableSignalData(NativeArray<CreateEntity.PackedFrame> frameData,
+                                       NativeArray<Animatable<WaveState>> waveData)
+            {
+                FrameData = frameData;
+                WaveData = waveData;
+            }
+            
+            public void Dispose()
+            {
+                FrameData.Dispose();
+                WaveData.Dispose();
+            }
+        }
+        
+        private BlittableSignalData ExtractDataFromSignal(in Signal signal)
         {
             int frameCount = signal.Frames.Count;
             NativeArray<CreateEntity.PackedFrame> packedFrames = new (signal.Frames.Count, Allocator.TempJob);
@@ -199,7 +217,7 @@ namespace JamUp.Waves.RuntimeScripts
                 accumulatedCount += count;
             }
 
-            return (packedFrames, waves);
+            return new (packedFrames, waves);
         }
     }
 }

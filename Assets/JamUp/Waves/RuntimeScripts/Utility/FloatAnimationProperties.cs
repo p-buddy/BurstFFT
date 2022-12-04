@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using JamUp.Waves.RuntimeScripts.BufferIndexing;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
@@ -7,6 +8,20 @@ namespace JamUp.Waves.RuntimeScripts
 {
     public static class FloatAnimationProperties
     {
+        public readonly struct UpdateInputs
+        {
+            public ComponentSystemBase System { get; }
+            public JobHandle Dependency { get; }
+            public ComponentTypeHandle<CurrentIndex> CurrentIndexHandle { get; }
+
+            public UpdateInputs(ComponentSystemBase system, JobHandle dependency)
+            {
+                System = system;
+                Dependency = dependency;
+                CurrentIndexHandle = system.GetComponentTypeHandle<CurrentIndex>(true);
+            }
+        }
+        
         private static class UpdateCurrent
         {
             public static SetCurrentAnimationValue<CurrentProjection, ProjectionElement> Projection => new();
@@ -50,10 +65,11 @@ namespace JamUp.Waves.RuntimeScripts
 
         public static void UpdateAll(JobHandle dependency, ComponentSystemBase system)
         {
-            UpdateHandles[Kind.Projection] = Projection.Update(UpdateCurrent.Projection, system, dependency);
-            UpdateHandles[Kind.Thickness] = Thickness.Update(UpdateCurrent.Thickness, system, dependency);
-            UpdateHandles[Kind.SampleRate] = SampleRate.Update(UpdateCurrent.SampleRate, system, dependency);
-            UpdateHandles[Kind.SignalLength] = SignalLength.Update(UpdateCurrent.SignalLength, system, dependency);
+            UpdateInputs inputs = new (system, dependency);
+            UpdateHandles[Kind.Projection] = Projection.Update(UpdateCurrent.Projection, in inputs);
+            UpdateHandles[Kind.Thickness] = Thickness.Update(UpdateCurrent.Thickness, in inputs);
+            UpdateHandles[Kind.SampleRate] = SampleRate.Update(UpdateCurrent.SampleRate, in inputs);
+            UpdateHandles[Kind.SignalLength] = SignalLength.Update(UpdateCurrent.SignalLength, in inputs);
         }
 
         public static JobHandle SetAll(ComponentSystemBase system, JobHandle dependency)

@@ -90,8 +90,10 @@ Shader "JamUp/ProdeduralWave"
             const float timeDelta = EndTime - StartTime;
             const float lerpTime = smoothstep(0, 1, (_Time.y - StartTime) / timeDelta);
 
-            const float time = GetTimeForVertexIndex(appdata.vid, SampleRateFrom);
-            const float timeResolution = GetTimeResolution(SampleRateFrom);
+            const float sampleRate = lerp(SampleRateFrom, SampleRateTo, lerpTime);
+
+            const float time = GetTimeForVertexIndex(appdata.vid, sampleRate);
+            const float timeResolution = GetTimeResolution(sampleRate);
             const float3 forward = mul(WaveOriginToWorldMatrix, float3(0, 0, 1));
 
             float3 samplePosition, nextSamplePosition;
@@ -116,7 +118,7 @@ Shader "JamUp/ProdeduralWave"
                 const float frequency = currentFreqAmpPhase.x;
                 const float amplitude = currentFreqAmpPhase.y;
                 const float phase = currentFreqAmpPhase.z;
-                const float3 displacementAxis = lerp(startAxis, endAxis,lerpTime);
+                const float3 displacementAxis = lerp(startAxis, endAxis, lerpTime);
                 const Wave wave = ConstructWave(frequency, amplitude, phase, currentWaveTypeRatio);
                 AppendPositionAndTangent(time, timeResolution, wave, forward, displacementAxis, samplePosition,
                                          nextSamplePosition, sampleTangent, nextSampleTangent);
@@ -128,9 +130,11 @@ Shader "JamUp/ProdeduralWave"
             sampleTangent = normalize(sampleTangent);
             nextSampleTangent = normalize(nextSampleTangent);
 
+            const float thickness = lerp(ThicknessFrom, ThicknessTo, lerpTime);
+
             float3 normal;
             const float3 localPosition = GetVertexPosition(appdata.vid, samplePosition, nextSamplePosition,
-                                                           sampleTangent, nextSampleTangent, ThicknessFrom, normal);
+                                                           sampleTangent, nextSampleTangent, thickness, normal);
 
             appdata.vertex.xyz = localPosition;
             appdata.normal = normal;

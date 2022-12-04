@@ -1,10 +1,11 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 using pbuddy.StringUtility.RuntimeScripts;
 
 namespace JamUp.UnityUtility
 {
-    public readonly struct ShaderProperty<TData> 
+    public readonly struct ShaderProperty<TData>
     {
         public int ID { get; }
         public TData Value { get; }
@@ -13,16 +14,15 @@ namespace JamUp.UnityUtility
         {
             ID = Shader.PropertyToID(toRemove is null ? name : name.RemoveSubString(toRemove));
             Value = default;
+            ShaderPropertyUtility.RegisterProperty<TData>(name, ID);
         }
         
-        // will this be deprecated?
         private ShaderProperty(int id, TData value)
         {
             ID = id;
             Value = value;
         }
 
-        // will this be deprecated?
         public ShaderProperty<TData> WithValue(TData value) => new (ID, value);
     }
 }
