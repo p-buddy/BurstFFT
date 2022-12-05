@@ -1,12 +1,12 @@
 {
-    "name": "JamUp.Waves.PlayModeTests",
+    "name": "PlayModeTests",
     "rootNamespace": "",
     "references": [
-        "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner",
         "Unity.Mathematics",
+        "JamUp.Waves.RuntimeScripts",
         "pbuddy.ShaderUtility.EditorScripts",
-        "JamUp.Waves.RuntimeScripts"
+        "Unity.Collections.Tests.Playmode",
+        "UnityEngine.TestRunner"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -15,7 +15,7 @@
     "precompiledReferences": [
         "nunit.framework.dll"
     ],
-    "autoReferenced": false,
+    "autoReferenced": true,
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS"
     ],

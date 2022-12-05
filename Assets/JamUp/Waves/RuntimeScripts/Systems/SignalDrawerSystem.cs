@@ -175,26 +175,17 @@ namespace JamUp.Waves.RuntimeScripts
                               in DynamicBuffer<AllWavesElement> allWaves,
                               in CurrentIndex index) =>
                     {
-                        int startingWaveCount = waveCounts[index.Value].Value;
-                        int endingWaveCount = waveCounts[index.Value + 1].Value;
-                        int waveCount = math.max(startingWaveCount, endingWaveCount);
+                        AllWavesElement.Indexer indexer = new (index.Value, in waveCounts, in allWaves);
+
+                        int waveCount = indexer.ComputedWaveCount;
 
                         currentWaves.ResizeUninitialized(waveCount);
                         currentAxes.ResizeUninitialized(waveCount);
 
                         for (int i = 0; i < waveCount; i++)
                         {
-                            int startIndex = waveIndex.Value + i;
-                            int endIndex = waveIndex.Value + startingWaveCount + i;
-                                   
-                            AllWavesElement startingWave = i >= startingWaveCount
-                                ? allWaves[endIndex].Default
-                                : allWaves[startIndex];
+                            indexer.GetWavesAt(waveIndex.Value, i, out var startingWave, out var endingWave);
 
-                            AllWavesElement endingWave = i >= endingWaveCount
-                                ? allWaves[startIndex].Default
-                                : allWaves[endIndex];
-                
                             currentWaves[i] = new CurrentWavesElement
                             {
                                 Value = AllWavesElement.PackSettings(startingWave, endingWave)
@@ -207,7 +198,7 @@ namespace JamUp.Waves.RuntimeScripts
                         }
 
                         currentWaveCount.Value = waveCount;
-                        waveIndex.IncrementBy(startingWaveCount);
+                        waveIndex.IncrementBy(indexer.CountToIncrement);
                     })
 #if MULTITHREADED
                     .ScheduleParallel(dependency);

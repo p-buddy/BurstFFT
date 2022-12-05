@@ -1,5 +1,6 @@
 using System;
 using JamUp.Waves.RuntimeScripts.API;
+using JamUp.Waves.RuntimeScripts.Audio;
 using JamUp.Waves.RuntimeScripts.BufferIndexing;
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
 using Unity.Burst;
@@ -7,6 +8,7 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace JamUp.Waves.RuntimeScripts
@@ -32,7 +34,9 @@ namespace JamUp.Waves.RuntimeScripts
         public EntityCommandBuffer ECB;
 
         public EntityArchetype EntityArchetype;
-
+        [ReadOnly]
+        public NativeArray<AudioGraphReference> GraphReferences;
+        [ReadOnly]
         public NativeArray<PropertyBlockReference> PropertyBlocks;
         [ReadOnly]
         public NativeArray<CurrentTimeFrame> TimeFrames;
@@ -81,6 +85,7 @@ namespace JamUp.Waves.RuntimeScripts
             };
             
             int accumulatedWaveCounts = 0;
+            int maxWaveCount = -1;
             for (int index = 0; index < elementsToAdd; index++)
             {
                 bool isRelease = index >= frameCount;
@@ -106,7 +111,11 @@ namespace JamUp.Waves.RuntimeScripts
                 {
                     accumulatedWaveCounts += waveCount;
                 }
+
+                maxWaveCount = math.max(maxWaveCount, waveCount);
             }
+
+            if (!entityHandle.UseExisting) Init<AudioKernelWrapper>(maxWaveCount, in entityHandle);
         }
 
         private void InitializeEntity(in EntityHandle handle)
@@ -118,6 +127,7 @@ namespace JamUp.Waves.RuntimeScripts
                 Init<CurrentWavesElement>(MaxWaveCount, in handle);
                 Init<CurrentWaveAxes>(MaxWaveCount, in handle);
                 ECB.SetComponent(entity, PropertyBlocks[Index - ExistingEntities.Length]);
+                ECB.SetComponent(entity, GraphReferences[Index - ExistingEntities.Length]);
                 return;
             }
             

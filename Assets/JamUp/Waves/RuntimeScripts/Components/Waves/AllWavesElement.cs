@@ -1,4 +1,5 @@
 using JamUp.Waves.RuntimeScripts.API;
+using JamUp.Waves.RuntimeScripts.BufferIndexing;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -7,6 +8,35 @@ namespace JamUp.Waves.RuntimeScripts
 {
     public struct AllWavesElement: IBufferElementData, IRequiredInArchetype
     {
+        public readonly struct Indexer
+        {
+            private readonly int startingWaveCount;
+            private readonly int endingWaveCount;
+            private readonly DynamicBuffer<AllWavesElement> waves;
+            public int ComputedWaveCount { get; }
+            public int CountToIncrement { get; }
+            
+            public Indexer(int index,
+                           in DynamicBuffer<WaveCountElement> waveCounts,
+                           in DynamicBuffer<AllWavesElement> waves)
+            {
+                startingWaveCount = waveCounts[index].Value;
+                endingWaveCount = waveCounts[index + 1].Value;
+                ComputedWaveCount = math.max(startingWaveCount, endingWaveCount);
+                CountToIncrement = startingWaveCount;
+                this.waves = waves;
+            }
+            
+            public void GetWavesAt(int waveIndex, int offset, out AllWavesElement startWave, out AllWavesElement endWave)
+            {
+                int startIndex = waveIndex + offset;
+                int endIndex = waveIndex + startingWaveCount + offset;
+
+                startWave = offset >= startingWaveCount ? waves[endIndex].Default : waves[startIndex];
+                endWave = offset >= endingWaveCount ? waves[startIndex].Default : waves[endIndex];
+            }
+        }
+        
         public float Frequency;
         public float Amplitude;
         public float4 WaveTypeRatio;

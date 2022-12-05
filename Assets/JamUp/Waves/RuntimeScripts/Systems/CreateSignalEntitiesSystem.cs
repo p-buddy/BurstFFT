@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using JamUp.Waves.RuntimeScripts.API;
+using JamUp.Waves.RuntimeScripts.Audio;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -24,6 +25,7 @@ namespace JamUp.Waves.RuntimeScripts
 
         private BeginSimulationEntityCommandBufferSystem beginEcbSystem;
         private SignalDrawerSystem drawerSystem;
+        private SynthesizerSystem synthSystem;
 
         public void EnqueueSignal(in Signal signal) => signals.Add(signal);
 
@@ -43,6 +45,7 @@ namespace JamUp.Waves.RuntimeScripts
 
             beginEcbSystem = World.GetOrCreateSystem<BeginSimulationEntityCommandBufferSystem>();
             drawerSystem = World.GetOrCreateSystem<SignalDrawerSystem>();
+            synthSystem = World.GetOrCreateSystem<SynthesizerSystem>();
         }
         
 
@@ -104,10 +107,15 @@ namespace JamUp.Waves.RuntimeScripts
             
             int newEntityCount = math.max(signalCount - entityCount, 0);
             NativeArray<PropertyBlockReference> propertyBlockReferences = new(newEntityCount, Allocator.TempJob);
+            NativeArray<AudioGraphReference> audioGraphReferences = new(newEntityCount, Allocator.TempJob);
+
             for (int i = 0; i < newEntityCount; i++)
             {
                 (int id, GCHandle handle) = drawerSystem.GetPropertyBlockHandle();
                 propertyBlockReferences[i] = new PropertyBlockReference(id, handle);
+
+                int index = synthSystem.GetGraphReference();
+                audioGraphReferences[i] = new AudioGraphReference(index);
             }
 
             var archetypeEntities = queryForArchetype.ToEntityArrayAsync(Allocator.TempJob, out JobHandle entityHandle);
@@ -144,6 +152,7 @@ namespace JamUp.Waves.RuntimeScripts
                     ECB = ecb,
                     TimeNow = timeNow,
                     PropertyBlocks = propertyBlockReferences,
+                    GraphReferences = audioGraphReferences,
                     EntityArchetype = localArchetype,
                     TimeFrames = componentsForJob.TimeFrames,
                     WaveCounts = componentsForJob.WaveCounts,
@@ -170,6 +179,7 @@ namespace JamUp.Waves.RuntimeScripts
             beginEcbSystem.AddJobHandleForProducer(Dependency);
             archetypeEntities.Dispose(Dependency);
             propertyBlockReferences.Dispose(Dependency);
+            audioGraphReferences.Dispose(Dependency);
             componentsForJob.Dispose(Dependency);
 
             signals.Clear();
