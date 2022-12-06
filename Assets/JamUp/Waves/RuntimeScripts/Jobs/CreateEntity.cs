@@ -27,6 +27,8 @@ namespace JamUp.Waves.RuntimeScripts
 
         [ReadOnly] public NativeArray<Animatable<WaveState>> Waves;
 
+        public float RootFrequency;
+
         public float TimeNow;
 
         public int Index;
@@ -60,6 +62,7 @@ namespace JamUp.Waves.RuntimeScripts
             EntityHandle entityHandle = new (Index, ExistingEntities, ECB, EntityArchetype, TimeNow, TimeFrames);
             InitializeEntity(in entityHandle);
             
+            ECB.SetComponent(entityHandle.Entity, new SignalEntity(RootFrequency));
             ECB.SetComponent(entityHandle.Entity, CurrentIndex.Invalid());
             ECB.SetComponent<CurrentTimeFrame>(entityHandle.Entity, default);
             ECB.SetComponent<CurrentWaveIndex>(entityHandle.Entity, default);

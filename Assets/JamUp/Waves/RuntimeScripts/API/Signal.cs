@@ -6,10 +6,12 @@ namespace JamUp.Waves.RuntimeScripts.API
 {
     public readonly struct Signal
     {
+        public float RootFrequency { get; }
         public List<KeyFrame> Frames { get; }
         
-        public Signal(float rootNote, params KeyFrame[] frames)
+        public Signal(float rootFrequency, params KeyFrame[] frames)
         {
+            RootFrequency = rootFrequency;
             Frames = frames is null || frames.Length == 0 ? new List<KeyFrame>() : frames.ToList();
         }
 

@@ -24,7 +24,7 @@ namespace JamUp.Waves.RuntimeScripts
         private EntityArchetype archetype;
 
         private BeginSimulationEntityCommandBufferSystem beginEcbSystem;
-        private SignalDrawerSystem drawerSystem;
+        private DrawerSystem drawerSystem;
         private SynthesizerSystem synthSystem;
 
         public void EnqueueSignal(in Signal signal) => signals.Add(signal);
@@ -44,7 +44,7 @@ namespace JamUp.Waves.RuntimeScripts
             queryForArchetype = GetEntityQuery(archetype.GetComponentTypes());
 
             beginEcbSystem = World.GetOrCreateSystem<BeginSimulationEntityCommandBufferSystem>();
-            drawerSystem = World.GetOrCreateSystem<SignalDrawerSystem>();
+            drawerSystem = World.GetOrCreateSystem<DrawerSystem>();
             synthSystem = World.GetOrCreateSystem<SynthesizerSystem>();
         }
         
@@ -151,6 +151,7 @@ namespace JamUp.Waves.RuntimeScripts
                     Index = index,
                     ECB = ecb,
                     TimeNow = timeNow,
+                    RootFrequency = signal.RootFrequency,
                     PropertyBlocks = propertyBlockReferences,
                     GraphReferences = audioGraphReferences,
                     EntityArchetype = localArchetype,

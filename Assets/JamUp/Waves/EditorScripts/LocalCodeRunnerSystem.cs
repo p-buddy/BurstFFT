@@ -10,6 +10,7 @@ using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 
 
+//[DisableAutoCreation]
 public partial class LocalCodeRunnerSystem : SystemBase
 {
     private static readonly string BaseDirectory = GetFolderInHome("WavyNthLocal");

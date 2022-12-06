@@ -14,16 +14,15 @@ namespace JamUp.Waves.RuntimeScripts
             private readonly int endingWaveCount;
             private readonly DynamicBuffer<AllWavesElement> waves;
             public int ComputedWaveCount { get; }
-            public int CountToIncrement { get; }
+            public int CountToIncrement => startingWaveCount;
             
             public Indexer(int index,
                            in DynamicBuffer<WaveCountElement> waveCounts,
                            in DynamicBuffer<AllWavesElement> waves)
             {
                 startingWaveCount = waveCounts[index].Value;
-                endingWaveCount = waveCounts[index + 1].Value;
+                endingWaveCount = index == waveCounts.Length - 1 ? 0 : waveCounts[index + 1].Value;
                 ComputedWaveCount = math.max(startingWaveCount, endingWaveCount);
-                CountToIncrement = startingWaveCount;
                 this.waves = waves;
             }
             

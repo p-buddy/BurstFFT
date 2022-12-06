@@ -12,12 +12,11 @@ float GetValueAtTime(in Wave wave, in float time)
     const float rotationAmount = TimeToRadians(time) * wave.Frequency + wave.PhaseRadians;
     const float sineValue = sin(rotationAmount);
 
-    const float sineFactor = wave.Amplitude * sineValue;
-    const float squareFactor = wave.Amplitude * sign(sineValue);
-    const float triangleFactor = wave.Amplitude * TwoOverPI * asin(sineValue);
-    const float sawToothFactor = wave.Amplitude * -TwoOverPI * atan(1.0f / tan(0.5f * (rotationAmount - PIOverTwo) - PI / 4));
+    const float squareFactor = sign(sineValue);
+    const float triangleFactor = TwoOverPI * asin(sineValue);
+    const float sawToothFactor = -TwoOverPI * atan(1.0f / tan(0.5f * (rotationAmount - PIOverTwo) - PI / 4));
     
-    return dot(wave.WaveTypeRatio, float4(sineFactor, squareFactor, triangleFactor, sawToothFactor));
+    return dot(wave.WaveTypeRatio, wave.Amplitude * float4(sineValue, squareFactor, triangleFactor, sawToothFactor));
 }
 
 float3 GetDisplacementAtTime(in Wave wave, in float time, in float3 displacementVector,in float3 propagationAxis)
