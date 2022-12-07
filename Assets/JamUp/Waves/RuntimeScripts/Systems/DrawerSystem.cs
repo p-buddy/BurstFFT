@@ -52,12 +52,11 @@ namespace JamUp.Waves.RuntimeScripts
 
         protected override void OnDestroy()
         {
-            base.OnDestroy();
-
             foreach (GCHandle handle in handles)
             {
                 handle.Free();
             }
+            base.OnDestroy();
         }
 
         protected override void OnUpdate()

@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
+using JamUp.Waves.RuntimeScripts;
 using JamUp.Waves.RuntimeScripts.API;
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
 using Unity.Entities;
@@ -25,6 +27,9 @@ public partial class LocalCodeRunnerSystem : SystemBase
     private readonly string codeFile = Path.Combine(BaseDirectory, JavascriptExecutableFileName);
 
     private bool doRun = true;
+    
+    private CreateSignalsSystem createSignalsSystem;
+    
     protected override void OnCreate()
     {
         base.OnCreate();
@@ -55,15 +60,20 @@ public partial class LocalCodeRunnerSystem : SystemBase
         };
         
         watcher.EnableRaisingEvents = true;
+
+        createSignalsSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystem<CreateSignalsSystem>();
     }
 
     
     protected override void OnUpdate()
     {
+
         if (!doRun) return;
         Stopwatch watch = new Stopwatch();
         watch.Start();
         JsRunner.ExecuteFile(codeFile, context => context.ApplyAPI(api));
+        //string code = File.ReadAllText(codeFile);
+        //createSignalsSystem.ExecuteString(code);
         watch.Stop();
         Debug.Log(watch.ElapsedMilliseconds);
         doRun = false;

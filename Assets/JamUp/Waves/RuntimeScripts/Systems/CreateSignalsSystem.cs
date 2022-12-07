@@ -16,7 +16,7 @@ namespace JamUp.Waves.RuntimeScripts
     [UpdateBefore(typeof(BeginSimulationEntityCommandBufferSystem))]
     [AlwaysUpdateSystem]
     [BurstCompile]
-    public partial class CreateSignalEntitiesSystem: SystemBase
+    public partial class CreateSignalsSystem: SystemBase
     {
         private readonly List<Signal> signals = new();
         
@@ -26,6 +26,8 @@ namespace JamUp.Waves.RuntimeScripts
         private BeginSimulationEntityCommandBufferSystem beginEcbSystem;
         private DrawerSystem drawerSystem;
         private SynthesizerSystem synthSystem;
+
+        private GCHandle apiHandle;
 
         public void EnqueueSignal(in Signal signal) => signals.Add(signal);
 
@@ -46,8 +48,9 @@ namespace JamUp.Waves.RuntimeScripts
             beginEcbSystem = World.GetOrCreateSystem<BeginSimulationEntityCommandBufferSystem>();
             drawerSystem = World.GetOrCreateSystem<DrawerSystem>();
             synthSystem = World.GetOrCreateSystem<SynthesizerSystem>();
+
+            apiHandle = new ThreadSafeAPI().GetHandle();
         }
-        
 
         private readonly struct ComponentsForJob
         {
@@ -230,5 +233,19 @@ namespace JamUp.Waves.RuntimeScripts
 
             return new (packedFrames, waves);
         }
+
+        public void ExecuteString(string code)
+        {
+            ExecuteJavascriptJob.Builder builder = new(code, apiHandle);
+            ExecuteJavascriptJob job = builder.MakeJob();
+            
+            //var handle = job.Schedule();
+            //builder.Dispose(handle);
+            //handle.Complete();
+            
+            job.Run();
+            builder.Dispose();
+        }
+        
     }
 }
