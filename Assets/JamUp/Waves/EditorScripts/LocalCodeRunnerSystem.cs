@@ -71,9 +71,10 @@ public partial class LocalCodeRunnerSystem : SystemBase
         if (!doRun) return;
         Stopwatch watch = new Stopwatch();
         watch.Start();
-        JsRunner.ExecuteFile(codeFile, context => context.ApplyAPI(api));
-        //string code = File.ReadAllText(codeFile);
-        //createSignalsSystem.ExecuteString(code);
+        
+        string code = File.ReadAllText(codeFile);
+        createSignalsSystem.ExecuteString(code);
+        
         watch.Stop();
         Debug.Log(watch.ElapsedMilliseconds);
         doRun = false;

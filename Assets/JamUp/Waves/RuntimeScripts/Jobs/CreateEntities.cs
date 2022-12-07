@@ -14,28 +14,45 @@ using UnityEngine;
 namespace JamUp.Waves.RuntimeScripts
 {
 
-    [BurstCompile]
-    public struct CreateEntity : IJob
+    //[BurstCompile]
+    public struct CreateEntities : IJob
     {
         public const int MaxWaveCount = 10;
         private const float AttackTime = 2f;
         private const float ReleaseTime = 0.1f;
 
-        [ReadOnly] public NativeArray<Entity> ExistingEntities;
+        // NOTE: Consider that a wave update could have happened, and thus the waves could look different
+        public float DataRetrievalTime; 
 
-        [ReadOnly] public NativeArray<PackedFrame> PackedFrames;
+        #region Data From Execution
+        [ReadOnly] 
+        public NativeArray<int> FrameOffsets;
+        public NativeArray<PackedFrame> PackedFrames;
 
-        [ReadOnly] public NativeArray<Animatable<WaveState>> Waves;
+        [ReadOnly] 
+        public NativeArray<int> WaveOffsets;
+        public NativeArray<Animatable<WaveState>> Waves;
+        
+        [ReadOnly]
+        public NativeArray<float> PreviousJobExecutionTime;
 
-        public float RootFrequency;
+        [ReadOnly] 
+        public NativeArray<float> RootFrequencies;
+        #endregion
 
-        public float TimeNow;
+        //public float RootFrequency;
 
-        public int Index;
+        //public float TimeNow;
+
+        //public int Index;
 
         public EntityCommandBuffer ECB;
 
         public EntityArchetype EntityArchetype;
+        
+        #region Data From Existing Entities        
+        [ReadOnly] 
+        public NativeArray<Entity> ExistingEntities;
         [ReadOnly]
         public NativeArray<AudioGraphReference> GraphReferences;
         [ReadOnly]
@@ -56,18 +73,33 @@ namespace JamUp.Waves.RuntimeScripts
         public BufferFromEntity<CurrentWavesElement> WavesForEntity;
         [ReadOnly] 
         public BufferFromEntity<CurrentWaveAxes> AxesForEntity;
-        
+        #endregion
         public void Execute()
         {
-            EntityHandle entityHandle = new (Index, ExistingEntities, ECB, EntityArchetype, TimeNow, TimeFrames);
+            int waveIndex = 0;
+            int frameIndex = 0;
+            float timeNow = DataRetrievalTime + PreviousJobExecutionTime[0];
+
+            for (int i = 0; i < FrameOffsets.Length; i++)
+            {
+                int frameCount = FrameOffsets[i];
+                ConstructEntity(i, timeNow, frameCount, waveIndex, frameIndex);
+                waveIndex += WaveOffsets[i];
+                frameIndex += frameCount;
+            }
+        }
+        
+        private void ConstructEntity(int index, float timeNow, int frameCount, int startingFrameIndex, int startingWaveIndex)
+        {
+            EntityHandle entityHandle = new (index, ExistingEntities, ECB, EntityArchetype, timeNow, TimeFrames);
             InitializeEntity(in entityHandle);
             
-            ECB.SetComponent(entityHandle.Entity, new SignalEntity(RootFrequency));
+            ECB.SetComponent(entityHandle.Entity, new SignalEntity(RootFrequencies[index]));
             ECB.SetComponent(entityHandle.Entity, CurrentIndex.Invalid());
             ECB.SetComponent<CurrentTimeFrame>(entityHandle.Entity, default);
             ECB.SetComponent<CurrentWaveIndex>(entityHandle.Entity, default);
 
-            int frameCount = PackedFrames.Length;
+            //int frameCount = PackedFrames.Length;
             int elementsToAdd = frameCount + 2; // all frames, plus 'sustain' and 'release'
             int capacity = 1 + elementsToAdd; // prepend one frame for 'attack'
             
@@ -76,7 +108,7 @@ namespace JamUp.Waves.RuntimeScripts
             Init<DurationElement>(capacity, in entityHandle).Append(new DurationElement(AttackTime));
             Init<WaveCountElement>(capacity, in entityHandle).Append(new WaveCountElement
             {
-                Value = entityHandle.UseExisting ? WaveCounts[Index].Value : 0
+                Value = entityHandle.UseExisting ? WaveCounts[index].Value : 0
             });
 
             SetBuffersWithInitialElements(capacity, in entityHandle);
@@ -89,15 +121,15 @@ namespace JamUp.Waves.RuntimeScripts
             
             int accumulatedWaveCounts = 0;
             int maxWaveCount = -1;
-            for (int index = 0; index < elementsToAdd; index++)
+            for (int i = 0; i < elementsToAdd; i++)
             {
-                bool isRelease = index >= frameCount;
-                bool isFinal = index > frameCount;
+                bool isRelease = i >= frameCount;
+                bool isFinal = i > frameCount;
                 PackedFrame frame = !isRelease
-                    ? PackedFrames[index]
+                    ? PackedFrames[startingFrameIndex + i]
                     : isFinal
-                        ? PackedFrames[frameCount - 1] // nothing, modifications will be to waves
-                        : PackedFrames[frameCount - 1].DefaultAnimations(ReleaseTime);
+                        ? PackedFrames[startingFrameIndex + frameCount - 1] // nothing, modifications will be to waves
+                        : PackedFrames[startingFrameIndex + frameCount - 1].DefaultAnimations(ReleaseTime);
 
                 int waveCount = frame.WaveCount;
                 entityCommandBuffer.Append(new WaveCountElement { Value = waveCount });
@@ -108,9 +140,9 @@ namespace JamUp.Waves.RuntimeScripts
                 entityCommandBuffer.AppendAnimationElement<SampleRateElement>(frame.SampleRate);
                 entityCommandBuffer.AppendAnimationElement<ThicknessElement>(frame.Thickness);
 
-                entityCommandBuffer.AppendWaveElements(Waves, accumulatedWaveCounts, waveCount);
+                entityCommandBuffer.AppendWaveElements(Waves, startingWaveIndex + accumulatedWaveCounts, waveCount);
 
-                if (index < frameCount - 1)
+                if (i < frameCount - 1)
                 {
                     accumulatedWaveCounts += waveCount;
                 }
@@ -129,8 +161,8 @@ namespace JamUp.Waves.RuntimeScripts
             {
                 Init<CurrentWavesElement>(MaxWaveCount, in handle);
                 Init<CurrentWaveAxes>(MaxWaveCount, in handle);
-                ECB.SetComponent(entity, PropertyBlocks[Index - ExistingEntities.Length]);
-                ECB.SetComponent(entity, GraphReferences[Index - ExistingEntities.Length]);
+                ECB.SetComponent(entity, PropertyBlocks[handle.Index - ExistingEntities.Length]);
+                ECB.SetComponent(entity, GraphReferences[handle.Index - ExistingEntities.Length]);
                 return;
             }
             
@@ -190,7 +222,7 @@ namespace JamUp.Waves.RuntimeScripts
             => handle.UseExisting
                 ? new TBufferElement
                 {
-                    Value = dataFromEntity[Index].Value.Lerp(handle.Interpolant),
+                    Value = dataFromEntity[handle.Index].Value.Lerp(handle.Interpolant),
                     AnimationCurve = AnimationCurve.Linear
                 }
                 : _default;
@@ -232,6 +264,8 @@ namespace JamUp.Waves.RuntimeScripts
             public bool UseExisting { get; }
             public Entity Entity { get; }
             public float Interpolant { get; }
+            public int Index { get; }
+
             
             public EntityHandle(int index,
                                 NativeArray<Entity> existingEntities,
@@ -240,9 +274,10 @@ namespace JamUp.Waves.RuntimeScripts
                                 float timeNow,
                                 NativeArray<CurrentTimeFrame> timeFrames)
             {
-                UseExisting = index < existingEntities.Length;
-                Entity = UseExisting ? existingEntities[index] : ecb.CreateEntity(archetype);
-                Interpolant = UseExisting ? timeFrames[index].Interpolate(timeNow) : 0f;
+                Index = index;
+                UseExisting = Index < existingEntities.Length;
+                Entity = UseExisting ? existingEntities[Index] : ecb.CreateEntity(archetype);
+                Interpolant = UseExisting ? timeFrames[Index].Interpolate(timeNow) : 0f;
             }
         }
 

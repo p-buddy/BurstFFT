@@ -14,35 +14,38 @@ namespace JamUp.Waves.RuntimeScripts
     {
         public readonly struct Builder /*: IThreadAPIData, IDisposable*/
         {
-            private GCHandle handle { get; }
+            public ManagedResource<ThreadSafeAPI> api { get; }
             private NativeArray<byte> ByteCode { get; }
-            private NativeList<CreateEntity.PackedFrame> FrameData { get; }
-            private NativeList<int> FrameDataOffsets { get; }
-            private NativeList<Animatable<WaveState>> WaveStates { get; }
-            private NativeList<int> WaveStateOffsets { get; }
-            private NativeList<float> RootFrequencies { get; }
+            public NativeList<CreateEntities.PackedFrame> FrameData { get; }
+            public NativeList<int> FrameDataOffsets { get; }
+            public NativeList<Animatable<WaveState>> WaveStates { get; }
+            public NativeList<int> WaveStateOffsets { get; }
+            public NativeList<float> RootFrequencies { get; }
+            public NativeArray<float> ExecutionTime { get; }
 
-            public Builder(string code, GCHandle handle, Allocator allocator = Allocator.Persistent)
+            public Builder(string code, in ManagedResource<ThreadSafeAPI> api, Allocator allocator = Allocator.Persistent)
             {
-                this.handle = handle;
+                this.api = api;
                 byte[] bytes = Encoding.GetBytes(code);
                 ByteCode = new NativeArray<byte>(bytes, allocator);
-                FrameData = new NativeList<CreateEntity.PackedFrame>(allocator);
+                FrameData = new NativeList<CreateEntities.PackedFrame>(allocator);
                 FrameDataOffsets = new NativeList<int>(allocator);
                 WaveStates = new NativeList<Animatable<WaveState>>(allocator);
                 WaveStateOffsets = new NativeList<int>(allocator);
                 RootFrequencies = new NativeList<float>(allocator);
+                ExecutionTime = new NativeArray<float>(1, allocator);
             }
 
             public ExecuteJavascriptJob MakeJob() => new()
             {
-                APIHandle = handle,
+                API = api,
                 CodeBytes = ByteCode,
                 FrameData = FrameData,
                 FrameDataOffsets = FrameDataOffsets,
                 WaveStates = WaveStates,
                 WaveStateOffsets = WaveStateOffsets,
-                RootFrequencies = RootFrequencies
+                RootFrequencies = RootFrequencies,
+                ExecutionTime = ExecutionTime
             };
 
             public void Dispose(JobHandle dependency)
@@ -59,43 +62,31 @@ namespace JamUp.Waves.RuntimeScripts
         }
         
         public static readonly Encoding Encoding = Encoding.UTF8;
-        public GCHandle APIHandle;
-        public NativeList<CreateEntity.PackedFrame> FrameData;
+        public ManagedResource<ThreadSafeAPI> API;
+        public NativeList<CreateEntities.PackedFrame> FrameData;
         public NativeList<int> FrameDataOffsets;
         public NativeList<Animatable<WaveState>> WaveStates;
         public NativeList<int> WaveStateOffsets;
         public NativeList<float> RootFrequencies;
 
         public NativeArray<byte> CodeBytes;
+        public NativeArray<float> ExecutionTime;
 
         public void Execute()
         {
             Stopwatch watch = new Stopwatch();
-            ThreadSafeAPI api = (ThreadSafeAPI)APIHandle.Target;
-            api.Reset();
-            
             watch.Start();
+            
+            ThreadSafeAPI api = API.Object;
             string code = Encoding.GetString(CodeBytes.ToArray());
-
-            watch.Start();
-            ExecutionContext context = JsRunner.GetExecutionContext();
-            watch.Stop();
-            UnityEngine.Debug.Log(watch.ElapsedMilliseconds);
-            
-            watch.Start();
-            context.ApplyAPI(api);
-            watch.Stop();
-            UnityEngine.Debug.Log(watch.ElapsedMilliseconds);
-            
-            watch.Start();
-            context.Execute(code);
-            watch.Stop();
-            UnityEngine.Debug.Log(watch.ElapsedMilliseconds);
-            /*
+            JsRunner.ExecuteString(code, context => context.ApplyAPI(api));
             foreach (Signal signal in api.Signals)
             {
                 ProcessFrame(in signal);
-            }*/
+            }
+            api.Reset();
+            watch.Stop();
+            ExecutionTime[0] = watch.ElapsedMilliseconds / 1000f;
         }
         
         private void ProcessFrame(in Signal signal)
@@ -108,7 +99,7 @@ namespace JamUp.Waves.RuntimeScripts
             for (int index = 0; index < frameCount; index++)
             {
                 KeyFrame frame = signal.Frames[index];
-                FrameData.Add(CreateEntity.PackedFrame.Pack(in frame));
+                FrameData.Add(CreateEntities.PackedFrame.Pack(in frame));
                 totalWaveCount += frame.Waves.Length;
             }
             
