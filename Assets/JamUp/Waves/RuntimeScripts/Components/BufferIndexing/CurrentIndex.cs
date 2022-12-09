@@ -8,6 +8,5 @@ namespace JamUp.Waves.RuntimeScripts.BufferIndexing
         public bool IsLast(in LastIndex last) => last.Value == Value;
         public void Increment() => Value++;
         public static CurrentIndex Invalid() => new () { Value = -1 };
-
     }
 }

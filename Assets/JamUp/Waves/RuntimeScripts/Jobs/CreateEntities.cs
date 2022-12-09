@@ -14,7 +14,7 @@ using UnityEngine;
 namespace JamUp.Waves.RuntimeScripts
 {
 
-    //[BurstCompile]
+    [BurstCompile]
     public struct CreateEntities : IJob
     {
         public const int MaxWaveCount = 10;
@@ -103,7 +103,7 @@ namespace JamUp.Waves.RuntimeScripts
             int elementsToAdd = frameCount + 2; // all frames, plus 'sustain' and 'release'
             int capacity = 1 + elementsToAdd; // prepend one frame for 'attack'
             
-            ECB.SetComponent(entityHandle.Entity, new LastIndex(capacity - 1));
+            ECB.SetComponent(entityHandle.Entity, new LastIndex(capacity - 2));
             
             Init<DurationElement>(capacity, in entityHandle).Append(new DurationElement(AttackTime));
             Init<WaveCountElement>(capacity, in entityHandle).Append(new WaveCountElement

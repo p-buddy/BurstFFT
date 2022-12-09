@@ -13,6 +13,6 @@ namespace JamUp.Waves.RuntimeScripts
             handle = obj.GetHandle();
         }
 
-        public static ManagedResource<T> Hold(object obj) => new(obj);
+        public static ManagedResource<T> Hold(T obj) => new(obj);
     }
 }

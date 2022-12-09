@@ -86,7 +86,7 @@ namespace JamUp.Waves.RuntimeScripts
                     }
                 })
 #if MULTITHREADED
-                .ScheduleParallel(dependency);
+                .ScheduleParallel(Dependency);
 #else
                 .Run();
 #endif

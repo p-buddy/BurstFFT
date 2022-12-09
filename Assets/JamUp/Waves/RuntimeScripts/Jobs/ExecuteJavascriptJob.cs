@@ -56,6 +56,7 @@ namespace JamUp.Waves.RuntimeScripts
                 WaveStates.Dispose(dependency);
                 WaveStateOffsets.Dispose(dependency);
                 RootFrequencies.Dispose(dependency);
+                ExecutionTime.Dispose(dependency);
             }
 
             public void Dispose() => Dispose(default);
@@ -68,7 +69,7 @@ namespace JamUp.Waves.RuntimeScripts
         public NativeList<Animatable<WaveState>> WaveStates;
         public NativeList<int> WaveStateOffsets;
         public NativeList<float> RootFrequencies;
-
+        
         public NativeArray<byte> CodeBytes;
         public NativeArray<float> ExecutionTime;
 

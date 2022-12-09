@@ -56,7 +56,7 @@ namespace JamUp.Waves.RuntimeScripts
             drawerSystem = World.GetOrCreateSystem<DrawerSystem>();
             synthSystem = World.GetOrCreateSystem<SynthesizerSystem>();
 
-            api = ManagedResource<ThreadSafeAPI>.Hold(new ThreadSafeAPI());
+            api = ManagedResource<ThreadSafeAPI>.Hold(new());
         }
 
         protected override void OnUpdate()
