@@ -605,7 +605,7 @@ PlayerSettings:
   webGLThreadsSupport: 0
   webGLDecompressionFallback: 0
   scriptingDefineSymbols:
-    Standalone: MULTITHREADEDe
+    Standalone: MULTITHREADED
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

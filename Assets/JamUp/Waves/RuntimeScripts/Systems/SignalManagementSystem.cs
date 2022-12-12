@@ -99,16 +99,8 @@ namespace JamUp.Waves.RuntimeScripts
                     for (int i = 0; i < waveCount; i++)
                     {
                         indexer.GetWavesAt(waveIndex.Value, i, out var startingWave, out var endingWave);
-
-                        currentWaves[i] = new CurrentWavesElement
-                        {
-                            Value = AllWavesElement.PackSettings(startingWave, endingWave)
-                        };
-                            
-                        currentAxes[i] = new CurrentWaveAxes
-                        {
-                            Value = AllWavesElement.PackAxes(startingWave, endingWave)
-                        };
+                        currentWaves[i] = new CurrentWavesElement(startingWave, endingWave);
+                        currentAxes[i] = new CurrentWaveAxes(startingWave, endingWave);
                     }
 
                     currentWaveCount.Value = waveCount;

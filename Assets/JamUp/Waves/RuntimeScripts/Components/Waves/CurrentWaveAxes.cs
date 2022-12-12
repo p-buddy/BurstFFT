@@ -11,5 +11,10 @@ namespace JamUp.Waves.RuntimeScripts
 
         public float3 Start => Value.c0;
         public float3 End => Value.c1;
+        
+        public CurrentWaveAxes(AllWavesElement first, AllWavesElement second)
+        {
+            Value = AllWavesElement.PackAxes(first, second);
+        }
     }
 }

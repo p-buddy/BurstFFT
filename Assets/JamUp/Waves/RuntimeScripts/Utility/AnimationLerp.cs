@@ -7,6 +7,7 @@ namespace JamUp.Waves.RuntimeScripts
 {
     public static class AnimationLerp
     {
+        public static float LerpBetween(this float2 bounds, float t) => math.lerp(bounds.x, bounds.y, t);
         public static float Lerp(this Animation<float> animation, float t)
         {
             float s = animation.Curve.GetLerpParameter(t);
